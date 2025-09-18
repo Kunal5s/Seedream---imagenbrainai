@@ -1,13 +1,12 @@
 
 import React, { useState } from 'react';
-import { generateImages, downloadGeneratedImage } from '../services/geminiService';
+import { generateImage, downloadGeneratedImage } from '../services/geminiService';
 import { 
   POLLINATIONS_STYLES, 
   POLLINATIONS_RATIOS, 
   MOODS, 
   LIGHTING_STYLES, 
-  COLORS,
-  QUALITY_OPTIONS
+  COLORS
 } from '../constants';
 import Select from './ui/Select';
 import Button from './ui/Button';
@@ -20,8 +19,7 @@ const ImageGenerator: React.FC = () => {
   const [selectedLighting, setSelectedLighting] = useState<string>(LIGHTING_STYLES[0]);
   const [selectedColor, setSelectedColor] = useState<string>(COLORS[0]);
 
-  const [selectedRatioIndex, setSelectedRatioIndex] = useState<number>(0);
-  const [selectedQualityName, setSelectedQualityName] = useState<string>(QUALITY_OPTIONS[0].name);
+  const [selectedRatioName, setSelectedRatioName] = useState<string>(POLLINATIONS_RATIOS[0].name);
   
   const [generatedImages, setGeneratedImages] = useState<string[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -39,36 +37,20 @@ const ImageGenerator: React.FC = () => {
     setGeneratedImages(null);
 
     try {
-      const finalPrompt = `${prompt}, ${selectedStyle} style, ${selectedMood} mood, ${selectedLighting}, ${selectedColor} color palette`;
+      const finalPrompt = `${prompt}, ${selectedStyle} style, ${selectedMood} mood, ${selectedLighting}, ${selectedColor} color palette, 4k, photorealistic`;
       
-      const ratio = POLLINATIONS_RATIOS[selectedRatioIndex];
-      const quality = QUALITY_OPTIONS.find(q => q.name === selectedQualityName);
-      const longestSideTarget = quality ? quality.value : 1024;
-      const MAX_DIMENSION = 1920; // Safe upper limit for Pollinations API to prevent failures
-
-      let targetWidth, targetHeight;
-      if (ratio.width >= ratio.height) { // Landscape or square
-        targetWidth = longestSideTarget;
-        targetHeight = Math.round(longestSideTarget * (ratio.height / ratio.width));
-      } else { // Portrait
-        targetHeight = longestSideTarget;
-        targetWidth = Math.round(longestSideTarget * (ratio.width / ratio.height));
+      const ratio = POLLINATIONS_RATIOS.find(r => r.name === selectedRatioName);
+      if (!ratio) {
+        throw new Error("Selected aspect ratio not found.");
       }
+      const aspectRatio = ratio.aspectRatio;
 
-      // Scale down to fit within API limits while preserving aspect ratio
-      let finalWidth = targetWidth;
-      let finalHeight = targetHeight;
-      if (finalWidth > MAX_DIMENSION || finalHeight > MAX_DIMENSION) {
-        if (finalWidth > finalHeight) {
-          finalHeight = Math.round(MAX_DIMENSION * (finalHeight / finalWidth));
-          finalWidth = MAX_DIMENSION;
-        } else {
-          finalWidth = Math.round(MAX_DIMENSION * (finalWidth / finalHeight));
-          finalHeight = MAX_DIMENSION;
-        }
-      }
+      // Create 4 image generation promises to run in parallel
+      const imagePromises = Array.from({ length: 4 }).map(() => 
+        generateImage(finalPrompt, aspectRatio)
+      );
 
-      const imageUrls = await generateImages(finalPrompt, finalWidth, finalHeight);
+      const imageUrls = await Promise.all(imagePromises);
       setGeneratedImages(imageUrls);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -87,13 +69,6 @@ const ImageGenerator: React.FC = () => {
        setError(err instanceof Error ? err.message : 'An unknown error occurred during download.');
     } finally {
       setIsDownloading(false);
-    }
-  };
-
-  const handleRatioChange = (name: string) => {
-    const index = POLLINATIONS_RATIOS.findIndex(r => r.name === name);
-    if (index !== -1) {
-      setSelectedRatioIndex(index);
     }
   };
 
@@ -129,15 +104,9 @@ const ImageGenerator: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Select 
               label="Aspect Ratio" 
-              value={POLLINATIONS_RATIOS[selectedRatioIndex].name}
-              onChange={handleRatioChange}
+              value={selectedRatioName}
+              onChange={setSelectedRatioName}
               options={POLLINATIONS_RATIOS.map(r => r.name)}
-            />
-            <Select 
-              label="Quality" 
-              value={selectedQualityName}
-              onChange={setSelectedQualityName}
-              options={QUALITY_OPTIONS.map(q => q.name)}
             />
           </div>
         </div>

@@ -1,23 +1,9 @@
 export const POLLINATIONS_RATIOS = [
-  { name: "Square 1:1", width: 512, height: 512 },
-  { name: "Landscape 16:9", width: 1024, height: 576 },
-  { name: "Portrait 9:16", width: 576, height: 1024 },
-  { name: "Wide 21:9", width: 1280, height: 540 },
-  { name: "Classic 4:3", width: 1024, height: 768 },
-  { name: "Tall 3:4", width: 768, height: 1024 },
-  { name: "Ultra Wide 32:9", width: 1920, height: 540 },
-  { name: "Mini Square 1:1", width: 256, height: 256 },
-  { name: "Cinema 2.39:1", width: 1190, height: 500 },
-  { name: "Custom 5:4", width: 1000, height: 800 },
-];
-
-export const QUALITY_OPTIONS = [
-  { name: 'Standard (1024px)', value: 1024 },
-  { name: '2K (2048px)', value: 2048 },
-  { name: '4K (4096px)', value: 4096 },
-  { name: '8K (7680px)', value: 7680 },
-  { name: '12K (12288px)', value: 12288 },
-  { name: '15K (15360px)', value: 15360 },
+  { name: "Square 1:1", aspectRatio: "1:1" as const },
+  { name: "Landscape 16:9", aspectRatio: "16:9" as const },
+  { name: "Portrait 9:16", aspectRatio: "9:16" as const },
+  { name: "Classic 4:3", aspectRatio: "4:3" as const },
+  { name: "Tall 3:4", aspectRatio: "3:4" as const },
 ];
 
 export const POLLINATIONS_STYLES = [
