@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import FooterBlogFeed from './FooterBlogFeed';
 
 const Footer: React.FC = () => {
   const quickLinks = [
@@ -18,7 +19,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 border-t border-green-400/20 mt-16">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           {/* Column 1: About */}
           <div className="md:col-span-1">
             <h3 className="text-xl font-bold mb-4">
@@ -60,6 +61,9 @@ const Footer: React.FC = () => {
              </ul>
           </div>
         </div>
+        
+        {/* Latest Articles Section */}
+        <FooterBlogFeed />
         
         {/* Bottom Bar */}
         <div className="border-t border-gray-700 mt-8 pt-6 text-center text-gray-500 text-sm">

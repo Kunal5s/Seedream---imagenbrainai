@@ -1,159 +1,200 @@
-
 import React, { useState } from 'react';
-import { generateImage, downloadGeneratedImage } from '../services/geminiService';
-import { 
-  POLLINATIONS_STYLES, 
-  POLLINATIONS_RATIOS, 
-  MOODS, 
-  LIGHTING_STYLES, 
-  COLORS
-} from '../constants';
-import Select from './ui/Select';
+import { generateImages, downloadImage } from '../services/geminiService';
+import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
 import Button from './ui/Button';
+import Select from './ui/Select';
 import Spinner from './ui/Spinner';
+import ImagePlaceholder from './ui/ImagePlaceholder';
+import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
+import RegenerateIcon from './ui/RegenerateIcon';
+import DownloadIcon from './ui/DownloadIcon';
 
 const ImageGenerator: React.FC = () => {
-  const [prompt, setPrompt] = useState<string>('');
-  const [selectedStyle, setSelectedStyle] = useState<string>(POLLINATIONS_STYLES[0]);
-  const [selectedMood, setSelectedMood] = useState<string>(MOODS[0]);
-  const [selectedLighting, setSelectedLighting] = useState<string>(LIGHTING_STYLES[0]);
-  const [selectedColor, setSelectedColor] = useState<string>(COLORS[0]);
-
-  const [selectedRatioName, setSelectedRatioName] = useState<string>(POLLINATIONS_RATIOS[0].name);
+  const [prompt, setPrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
+  const [style, setStyle] = useState(CREATIVE_STYLES[0]);
+  const [aspectRatio, setAspectRatio] = useState(IMAGEN_BRAIN_RATIOS[0]);
+  const [mood, setMood] = useState(MOODS[0]);
+  const [lighting, setLighting] = useState(LIGHTING_STYLES[0]);
+  const [color, setColor] = useState(COLORS[0]);
+  const [numberOfImages, setNumberOfImages] = useState(4);
   
-  const [generatedImages, setGeneratedImages] = useState<string[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
+
+  const constructFinalPrompt = () => {
+    let finalPrompt = prompt;
+    if (style !== 'Photorealistic') {
+      finalPrompt += `, ${style} style`;
+    }
+    if (mood !== 'Neutral') {
+      finalPrompt += `, ${mood} mood`;
+    }
+    if (lighting !== 'Neutral') {
+      finalPrompt += `, ${lighting} lighting`;
+    }
+    if (color !== 'Default') {
+      finalPrompt += `, ${color}`;
+    }
+    if (negativePrompt) {
+      finalPrompt += ` | negative prompt: ${negativePrompt}`;
+    }
+    return finalPrompt;
+  };
 
   const handleGenerate = async () => {
     if (!prompt) {
-      setError('Please enter a prompt.');
+      setError('Please enter a prompt to generate an image.');
       return;
     }
-    
     setIsLoading(true);
     setError(null);
-    setGeneratedImages(null);
-
+    setGeneratedImages([]);
     try {
-      const finalPrompt = `${prompt}, ${selectedStyle} style, ${selectedMood} mood, ${selectedLighting}, ${selectedColor} color palette, 4k, photorealistic`;
-      
-      const ratio = POLLINATIONS_RATIOS.find(r => r.name === selectedRatioName);
-      if (!ratio) {
-        throw new Error("Selected aspect ratio not found.");
-      }
-      const aspectRatio = ratio.aspectRatio;
-
-      // Create 4 image generation promises to run in parallel
-      const imagePromises = Array.from({ length: 4 }).map(() => 
-        generateImage(finalPrompt, aspectRatio)
-      );
-
-      const imageUrls = await Promise.all(imagePromises);
-      setGeneratedImages(imageUrls);
+      const finalPrompt = constructFinalPrompt();
+      const images = await generateImages(finalPrompt, aspectRatio.aspectRatio, numberOfImages);
+      setGeneratedImages(images);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      setError(err instanceof Error ? err.message : 'An unknown error occurred during generation.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownload = async (imageUrl: string, format: 'png' | 'jpeg') => {
-    if (!imageUrl) return;
-    setIsDownloading(true);
-    setError(null);
-    try {
-      await downloadGeneratedImage(imageUrl, prompt, format);
-    } catch (err) {
-       setError(err instanceof Error ? err.message : 'An unknown error occurred during download.');
-    } finally {
-      setIsDownloading(false);
-    }
+  const handleDownload = (imageUrl: string, format: 'png' | 'jpeg') => {
+    downloadImage(imageUrl, prompt, format);
   };
-
+  
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="space-y-6">
-        <div>
-          <label htmlFor="prompt" className="block text-lg font-medium text-green-300 mb-2">
-            Your Vision
-          </label>
-          <textarea
-            id="prompt"
-            rows={3}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-700 rounded-md p-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
-            placeholder="e.g., A cute baby elephant painting in a forest"
-          />
-        </div>
-        
-        <div>
-          <h4 className="text-lg font-medium text-green-300 mb-2">Creative Controls</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select label="Style" value={selectedStyle} onChange={setSelectedStyle} options={POLLINATIONS_STYLES} />
-            <Select label="Mood" value={selectedMood} onChange={setSelectedMood} options={MOODS} />
-            <Select label="Lighting" value={selectedLighting} onChange={setSelectedLighting} options={LIGHTING_STYLES} />
-            <Select label="Color" value={selectedColor} onChange={setSelectedColor} options={COLORS} />
-          </div>
-        </div>
-        
-        <div>
-          <h4 className="text-lg font-medium text-green-300 mb-2">Technical Controls</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select 
-              label="Aspect Ratio" 
-              value={selectedRatioName}
-              onChange={setSelectedRatioName}
-              options={POLLINATIONS_RATIOS.map(r => r.name)}
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4">
-            <Button onClick={handleGenerate} disabled={isLoading}>
-                {isLoading ? 'Generating...' : generatedImages ? 'Generate New' : 'Generate'}
-            </Button>
-            {generatedImages && !isLoading && (
-                <Button onClick={handleGenerate} disabled={isLoading} variant="secondary">
-                    Regenerate
-                </Button>
-            )}
-        </div>
+    <div className="space-y-6">
+      <div>
+        <label htmlFor="prompt" className="block text-lg font-medium text-green-300 mb-2">
+          Describe your vision
+        </label>
+        <textarea
+          id="prompt"
+          rows={3}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="w-full bg-gray-900 border border-gray-700 rounded-md p-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
+          placeholder="e.g., a photorealistic portrait of an astronaut on a neon-lit alien planet"
+        />
       </div>
 
-      <div className="flex flex-col items-center justify-center bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-700 min-h-[300px] lg:min-h-full p-4">
-        {isLoading && <Spinner />}
-        {error && <p className="text-red-400 text-center">{error}</p>}
-        {generatedImages && !isLoading && (
-            <div className="grid grid-cols-2 gap-4 w-full">
-                {generatedImages.map((imageUrl, index) => (
-                    <div key={index} className="flex flex-col items-center gap-2 p-2 bg-gray-900 rounded-lg border border-gray-700">
-                        <img src={imageUrl} alt={`Generated art ${index + 1}`} className="rounded-md w-full aspect-square object-contain" />
-                        <div className="flex gap-2 w-full mt-auto">
-                            <button
-                                onClick={() => handleDownload(imageUrl, 'png')}
-                                disabled={isDownloading}
-                                className="flex-1 bg-gray-700 text-gray-200 text-sm py-1.5 px-2 rounded hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 transition-colors"
-                            >
-                                {isDownloading ? '...' : 'PNG'}
-                            </button>
-                            <button
-                                onClick={() => handleDownload(imageUrl, 'jpeg')}
-                                disabled={isDownloading}
-                                className="flex-1 bg-gray-700 text-gray-200 text-sm py-1.5 px-2 rounded hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 transition-colors"
-                            >
-                               {isDownloading ? '...' : 'JPEG'}
-                            </button>
-                        </div>
-                    </div>
-                ))}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Select
+          label="Creative Style"
+          value={style}
+          onChange={setStyle}
+          options={CREATIVE_STYLES}
+        />
+        <div className="flex flex-col">
+          <label htmlFor="aspect-ratio-select" className="block text-sm font-medium text-gray-400 mb-1">
+            Aspect Ratio
+          </label>
+          <select
+            id="aspect-ratio-select"
+            value={aspectRatio.name}
+            onChange={(e) => {
+              const selectedRatio = IMAGEN_BRAIN_RATIOS.find(r => r.name === e.target.value);
+              if (selectedRatio) setAspectRatio(selectedRatio);
+            }}
+            className="w-full bg-gray-900 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
+          >
+            {IMAGEN_BRAIN_RATIOS.map(ratio => (
+              <option key={ratio.name} value={ratio.name}>{ratio.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col">
+          <label htmlFor="number-of-images" className="block text-sm font-medium text-gray-400 mb-1">
+            Number of Images
+          </label>
+          <select
+             id="number-of-images"
+             value={numberOfImages}
+             onChange={(e) => setNumberOfImages(parseInt(e.target.value, 10))}
+             className="w-full bg-gray-900 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
+          >
+            {[1, 2, 3, 4].map(num => (
+              <option key={num} value={num}>{num}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      
+      <div>
+        <button 
+          onClick={() => setAdvancedOptionsVisible(!advancedOptionsVisible)}
+          className="text-green-300 hover:text-green-200 text-sm font-semibold"
+        >
+          {advancedOptionsVisible ? 'Hide Advanced Options ▼' : 'Show Advanced Options ▲'}
+        </button>
+      </div>
+      
+      {advancedOptionsVisible && (
+         <div className="space-y-4 p-4 border border-gray-700 rounded-lg bg-gray-900/50">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <Select label="Mood" value={mood} onChange={setMood} options={MOODS} />
+             <Select label="Lighting Style" value={lighting} onChange={setLighting} options={LIGHTING_STYLES} />
+             <Select label="Color Scheme" value={color} onChange={setColor} options={COLORS} />
+           </div>
+           <div>
+             <label htmlFor="negative-prompt" className="block text-sm font-medium text-gray-400 mb-1">
+               Negative Prompt (what to avoid)
+             </label>
+             <input
+               type="text"
+               id="negative-prompt"
+               value={negativePrompt}
+               onChange={(e) => setNegativePrompt(e.target.value)}
+               className="w-full bg-gray-900 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
+               placeholder="e.g., blurry, text, watermark, ugly"
+             />
+           </div>
+         </div>
+      )}
+
+      <Button onClick={handleGenerate} disabled={isLoading}>
+        {isLoading ? 'Generating...' : 'Generate Images'}
+      </Button>
+
+      {error && !isLoading && <p className="text-red-400 text-center bg-red-900/20 p-3 rounded-lg">{error}</p>}
+      
+      <div className="mt-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start justify-center">
+          {isLoading && Array.from({ length: numberOfImages }).map((_, i) => (
+              <div key={i} className={`${aspectRatio.className} w-full bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center`}>
+                <Spinner />
+              </div>
+          ))}
+          {!isLoading && generatedImages.length === 0 && !error && Array.from({ length: numberOfImages }).map((_, i) => (
+             <ImagePlaceholder key={i} aspectRatioClass={aspectRatio.className} />
+          ))}
+          {!isLoading && error && <ImageErrorPlaceholder message={error} aspectRatioClass={aspectRatio.className} />}
+          {!isLoading && generatedImages.length > 0 && generatedImages.map((imageSrc, index) => (
+            <div key={index} className={`relative group w-full ${aspectRatio.className}`}>
+              <img src={imageSrc} alt={`Generated image ${index + 1}`} className="w-full h-full object-contain rounded-lg bg-black" />
+              <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={handleGenerate} 
+                  className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                  title="Regenerate All">
+                  <RegenerateIcon className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => handleDownload(imageSrc, 'png')} 
+                  className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                  title="Download as PNG">
+                  <DownloadIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-        )}
-        {!isLoading && !error && !generatedImages && (
-          <p className="text-gray-500">Your generated images will appear here</p>
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );
