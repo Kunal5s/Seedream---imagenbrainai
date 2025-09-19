@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to fix module resolution issues.
+import * as ReactRouterDom from 'react-router-dom';
 
 const features: { title: string; keywords: string }[] = [
   { title: "Ultra-Realistic 4K Output", keywords: "4k,resolution,hd,realistic" },
@@ -54,12 +55,12 @@ const FeatureGrid: React.FC = () => {
         ))}
       </div>
       <div className="text-center mt-12">
-        <Link 
+        <ReactRouterDom.Link 
           to="/features"
           className="bg-gray-800 text-green-300 font-bold py-3 px-8 rounded-lg border border-green-400/30 transition-all duration-300 ease-in-out transform hover:bg-green-400/10 hover:shadow-lg hover:shadow-green-400/20 focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-opacity-50"
         >
           Explore All Features
-        </Link>
+        </ReactRouterDom.Link>
       </div>
     </section>
   );

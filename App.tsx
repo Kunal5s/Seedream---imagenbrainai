@@ -1,5 +1,6 @@
 import React from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+// FIX: Use namespace import for react-router-dom to fix module resolution issues.
+import * as ReactRouterDom from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -14,25 +15,25 @@ import ArticlePage from './pages/ArticlePage';
 
 const App: React.FC = () => {
   return (
-    <HashRouter>
+    <ReactRouterDom.HashRouter>
       <div className="min-h-screen bg-gray-900/50 bg-gradient-to-b from-black via-gray-900 to-black text-gray-200 font-sans flex flex-col">
         <Header />
         <main className="flex-grow container mx-auto px-4 py-8">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-            <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-            <Route path="/disclaimer" element={<DisclaimerPage />} />
-            <Route path="/features" element={<FeaturesPage />} />
-            <Route path="/blog" element={<BlogPage />} />
-            <Route path="/blog/:slug" element={<ArticlePage />} />
-          </Routes>
+          <ReactRouterDom.Routes>
+            <ReactRouterDom.Route path="/" element={<HomePage />} />
+            <ReactRouterDom.Route path="/about" element={<AboutPage />} />
+            <ReactRouterDom.Route path="/contact" element={<ContactPage />} />
+            <ReactRouterDom.Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <ReactRouterDom.Route path="/terms-of-service" element={<TermsOfServicePage />} />
+            <ReactRouterDom.Route path="/disclaimer" element={<DisclaimerPage />} />
+            <ReactRouterDom.Route path="/features" element={<FeaturesPage />} />
+            <ReactRouterDom.Route path="/blog" element={<BlogPage />} />
+            <ReactRouterDom.Route path="/blog/:slug" element={<ArticlePage />} />
+          </ReactRouterDom.Routes>
         </main>
         <Footer />
       </div>
-    </HashRouter>
+    </ReactRouterDom.HashRouter>
   );
 };
 
