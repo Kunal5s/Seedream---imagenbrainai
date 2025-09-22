@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { generateImages, downloadImage } from '../services/geminiService';
+import { generateImages } from '../services/pollinationsService';
+import { downloadImage } from '../services/geminiService'; // downloadImage is a generic utility, can stay here.
 import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
 import Button from './ui/Button';
 import Select from './ui/Select';

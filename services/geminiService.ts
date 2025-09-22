@@ -16,36 +16,46 @@ const getAiClient = (): GoogleGenAI => {
     return ai;
 };
 
-
-type AspectRatio = "1:1" | "3:4" | "4:3" | "9:16" | "16:9";
-
-export const generateImages = async (prompt: string, aspectRatio: AspectRatio, numberOfImages: number): Promise<string[]> => {
+// FIX: Implement and export the missing `generateImages` function to resolve import errors.
+/**
+ * Generates images using the Gemini Imagen 4.0 model.
+ * @param prompt The text prompt for the image.
+ * @param aspectRatio The desired aspect ratio.
+ * @param numberOfImages The number of images to generate.
+ * @returns A promise that resolves to an array of base64 data URLs of the generated images.
+ */
+export const generateImages = async (
+  prompt: string,
+  aspectRatio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9",
+  numberOfImages: number
+): Promise<string[]> => {
   try {
     const aiClient = getAiClient();
     const response = await aiClient.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
-        config: {
-          numberOfImages: numberOfImages,
-          outputMimeType: 'image/png',
-          aspectRatio: aspectRatio,
-        },
+      model: 'imagen-4.0-generate-001',
+      prompt: prompt,
+      config: {
+        numberOfImages: numberOfImages,
+        aspectRatio: aspectRatio,
+        outputMimeType: 'image/png',
+      },
     });
 
     if (response.generatedImages && response.generatedImages.length > 0) {
-        return response.generatedImages.map(img => `data:image/png;base64,${img.image.imageBytes}`);
+      return response.generatedImages.map(img => {
+        const base64ImageBytes: string = img.image.imageBytes;
+        return `data:image/png;base64,${base64ImageBytes}`;
+      });
     }
 
     throw new Error('No images were returned from the API.');
   } catch (error) {
-    console.error('Error generating image with Gemini:', error);
-    if (error instanceof Error && error.message.includes('SAFETY')) {
-        throw new Error('Image generation failed due to safety policies. Please try a different prompt.');
-    }
+    console.error('Error generating images with Gemini:', error);
     // Re-throw the original error to be displayed in the component UI
     throw error;
   }
 };
+
 
 export const downloadImage = async (imageUrl: string, prompt: string, format: 'png' | 'jpeg'): Promise<void> => {
   try {

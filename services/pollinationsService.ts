@@ -1,63 +1,57 @@
-// FIX: Implemented the full pollinationsService which was previously missing.
-// Note: This service appears to be a legacy part of the application and might not be actively used.
-// The primary image generation is handled by `geminiService.ts`.
-// This file is provided to resolve build errors and maintain potential legacy functionality.
+import { IMAGEN_BRAIN_RATIOS } from '../constants';
 
-interface PollinationsResponse {
-  'image_url': string;
-  // Other potential properties from the API
-}
+type AspectRatio = typeof IMAGEN_BRAIN_RATIOS[number]['aspectRatio'];
+
+const getDimensionsFromRatio = (aspectRatio: AspectRatio): { width: number; height: number } => {
+    // Use a base of 1024 for the longest side for good quality.
+    const longSide = 1024;
+    
+    switch (aspectRatio) {
+        case '1:1': return { width: 1024, height: 1024 };
+        case '3:4': return { width: 768, height: longSide };
+        case '4:3': return { width: longSide, height: 768 };
+        case '9:16': return { width: 576, height: longSide };
+        case '16:9': return { width: longSide, height: 576 };
+        default: return { width: 1024, height: 1024 }; // Default to square
+    }
+};
 
 /**
- * Generates an image using the Pollinations AI API via a Vercel proxy.
+ * Generates image URLs using the Pollinations AI URL-based API.
+ * This method is faster and more reliable as it avoids serverless function timeouts.
  * @param {string} prompt - The text prompt for the image.
- * @param {number} width - The width of the image.
- * @param {number} height - The height of the image.
- * @param {string} [style] - An optional style for the image.
- * @returns {Promise<string>} - A promise that resolves to the URL of the generated image.
+ * @param {AspectRatio} aspectRatio - The desired aspect ratio.
+ * @param {number} numberOfImages - The number of images to generate.
+ * @returns {Promise<string[]>} - A promise that resolves to an array of direct URLs to the generated images.
  */
-export const generatePollinationsImage = async (
+export const generateImages = async (
   prompt: string,
-  width: number,
-  height: number,
-  style?: string
-): Promise<string> => {
+  aspectRatio: AspectRatio,
+  numberOfImages: number,
+): Promise<string[]> => {
   try {
-    const fullPrompt = style ? `${prompt}, ${style}` : prompt;
-    
-    // The request is sent to our own Vercel function, which acts as a proxy.
-    const response = await fetch('/api/pollinations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: fullPrompt,
-        width: width,
-        height: height,
-        // Other parameters supported by Pollinations API can be added here
-        // e.g., model, seed, nologo, etc.
-      }),
+    const { width, height } = getDimensionsFromRatio(aspectRatio);
+
+    // URL-encode the prompt to handle special characters.
+    const encodedPrompt = encodeURIComponent(prompt);
+
+    const imageUrls = Array.from({ length: numberOfImages }).map(() => {
+        // Generate a random seed for each image to ensure variety.
+        const seed = Math.floor(Math.random() * 100000);
+        // Construct the direct image URL. The browser will fetch this.
+        // The nologo=true parameter helps remove the default watermark.
+        return `https://pollinations.ai/p/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `API request failed with status ${response.status}`);
-    }
+    // The function resolves almost instantly with the list of URLs.
+    // The browser's <img> tags will handle the actual image loading.
+    return Promise.resolve(imageUrls);
 
-    const data: PollinationsResponse[] = await response.json();
-
-    // Pollinations API returns an array of results. We'll take the first one.
-    if (data && data.length > 0 && data[0].image_url) {
-      return data[0].image_url;
-    } else {
-      throw new Error('No image URL returned from Pollinations API.');
-    }
   } catch (error) {
-    console.error('Error calling Pollinations service:', error);
+    console.error('Error generating Pollinations image URLs:', error);
     if (error instanceof Error) {
-      throw error;
+        throw error;
     }
-    throw new Error('An unknown error occurred while generating the image.');
+    throw new Error('An unknown error occurred while preparing the image URLs.');
   }
 };
