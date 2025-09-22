@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { generateImages } from '../services/pollinationsService';
-import { downloadImage } from '../services/geminiService'; // downloadImage is a generic utility, can stay here.
+import { downloadImage } from '../services/geminiService';
 import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
 import Button from './ui/Button';
 import Select from './ui/Select';
-import Spinner from './ui/Spinner';
+import MoonLoader from './ui/MoonLoader';
 import ImagePlaceholder from './ui/ImagePlaceholder';
 import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
+import SuccessWrapper from './ui/SuccessWrapper';
 import RegenerateIcon from './ui/RegenerateIcon';
 import DownloadIcon from './ui/DownloadIcon';
+
+interface ImageState {
+  key: number;
+  src: string | null;
+  status: 'placeholder' | 'loading' | 'success' | 'error';
+  error?: string | null;
+}
 
 const ImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
@@ -20,53 +28,97 @@ const ImageGenerator: React.FC = () => {
   const [color, setColor] = useState(COLORS[0]);
   const [numberOfImages, setNumberOfImages] = useState(4);
   
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [images, setImages] = useState<ImageState[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
+  const cancelGeneration = useRef(false);
+
+  useEffect(() => {
+    setImages(
+      Array.from({ length: numberOfImages }, (_, i) => ({
+        key: Date.now() + i,
+        src: null,
+        status: 'placeholder',
+      }))
+    );
+  }, [numberOfImages]);
 
   const constructFinalPrompt = () => {
     let finalPrompt = prompt;
-    if (style !== 'Photorealistic') {
-      finalPrompt += `, ${style} style`;
-    }
-    if (mood !== 'Neutral') {
-      finalPrompt += `, ${mood} mood`;
-    }
-    if (lighting !== 'Neutral') {
-      finalPrompt += `, ${lighting} lighting`;
-    }
-    if (color !== 'Default') {
-      finalPrompt += `, ${color}`;
-    }
-    if (negativePrompt) {
-      finalPrompt += ` | negative prompt: ${negativePrompt}`;
-    }
+    if (style !== 'Photorealistic') finalPrompt += `, ${style} style`;
+    if (mood !== 'Neutral') finalPrompt += `, ${mood} mood`;
+    if (lighting !== 'Neutral') finalPrompt += `, ${lighting} lighting`;
+    if (color !== 'Default') finalPrompt += `, ${color}`;
+    if (negativePrompt) finalPrompt += ` --no ${negativePrompt}`;
     return finalPrompt;
   };
 
   const handleGenerate = async () => {
     if (!prompt) {
-      setError('Please enter a prompt to generate an image.');
+      setGlobalError('Please enter a prompt to generate an image.');
       return;
     }
-    setIsLoading(true);
-    setError(null);
-    setGeneratedImages([]);
+
+    setIsGenerating(true);
+    setGlobalError(null);
+    cancelGeneration.current = false;
+    
+    setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
+
     try {
       const finalPrompt = constructFinalPrompt();
-      const images = await generateImages(finalPrompt, aspectRatio.aspectRatio, numberOfImages);
-      setGeneratedImages(images);
+      const imageUrls = await generateImages(finalPrompt, aspectRatio.aspectRatio, numberOfImages);
+      
+      for (let i = 0; i < imageUrls.length; i++) {
+        if (cancelGeneration.current) {
+            setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
+            break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2500)); // ~2.5 second delay per image
+        if (cancelGeneration.current) {
+          setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
+          break;
+        }
+        setImages(prev => prev.map((img, index) => 
+            index === i ? { ...img, status: 'success', src: imageUrls[i], key: Date.now() + i } : img
+        ));
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred during generation.');
+      const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
+      setGlobalError(errorMsg);
+      setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
     } finally {
-      setIsLoading(false);
+      setIsGenerating(false);
     }
   };
 
-  const handleDownload = (imageUrl: string, format: 'png' | 'jpeg') => {
-    downloadImage(imageUrl, prompt, format);
+  const handleStop = () => {
+    cancelGeneration.current = true;
+    setIsGenerating(false);
+  };
+  
+  const handleRegenerateSingle = async (index: number) => {
+    if (!prompt) {
+        setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: 'Cannot regenerate without a prompt.' } : img));
+        return;
+    }
+    setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'loading', src: null, error: null } : img));
+    try {
+        const finalPrompt = constructFinalPrompt();
+        const imageUrls = await generateImages(finalPrompt, aspectRatio.aspectRatio, 1);
+        setImages(prev => prev.map((img, i) => 
+            i === index ? { ...img, status: 'success', src: imageUrls[0], key: Date.now() + i } : img
+        ));
+    } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
+        setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
+    }
+  };
+
+  const handleDownload = (imageUrl: string) => {
+    downloadImage(imageUrl, prompt, 'png');
   };
   
   return (
@@ -158,41 +210,40 @@ const ImageGenerator: React.FC = () => {
            </div>
          </div>
       )}
+      <div className={isGenerating ? "bg-red-500 text-white" : ""}>
+        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt && !isGenerating}>
+            {isGenerating ? 'Stop Generating' : 'Generate Images'}
+        </Button>
+      </div>
 
-      <Button onClick={handleGenerate} disabled={isLoading}>
-        {isLoading ? 'Generating...' : 'Generate Images'}
-      </Button>
 
-      {error && !isLoading && <p className="text-red-400 text-center bg-red-900/20 p-3 rounded-lg">{error}</p>}
+      {globalError && !isGenerating && <p className="text-red-400 text-center bg-red-900/20 p-3 rounded-lg">{globalError}</p>}
       
       <div className="mt-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start justify-center">
-          {isLoading && Array.from({ length: numberOfImages }).map((_, i) => (
-              <div key={i} className={`${aspectRatio.className} w-full bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center`}>
-                <Spinner />
-              </div>
-          ))}
-          {!isLoading && generatedImages.length === 0 && !error && Array.from({ length: numberOfImages }).map((_, i) => (
-             <ImagePlaceholder key={i} aspectRatioClass={aspectRatio.className} />
-          ))}
-          {!isLoading && error && <ImageErrorPlaceholder message={error} aspectRatioClass={aspectRatio.className} />}
-          {!isLoading && generatedImages.length > 0 && generatedImages.map((imageSrc, index) => (
-            <div key={index} className={`relative group w-full ${aspectRatio.className}`}>
-              <img src={imageSrc} alt={`Generated image ${index + 1}`} className="w-full h-full object-contain rounded-lg bg-black" />
-              <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={handleGenerate} 
-                  className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
-                  title="Regenerate All">
-                  <RegenerateIcon className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={() => handleDownload(imageSrc, 'png')} 
-                  className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
-                  title="Download as PNG">
-                  <DownloadIcon className="w-5 h-5" />
-                </button>
-              </div>
+          {images.map((image, index) => (
+            <div key={image.key} className={`relative group w-full ${aspectRatio.className} bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center`}>
+              {image.status === 'placeholder' && <ImagePlaceholder aspectRatioClass={aspectRatio.className} />}
+              {image.status === 'loading' && <MoonLoader />}
+              {image.status === 'success' && image.src && <SuccessWrapper src={image.src} alt={`Generated image ${index + 1}`} />}
+              {image.status === 'error' && <ImageErrorPlaceholder message={image.error || 'An error occurred'} aspectRatioClass={aspectRatio.className} />}
+              
+              {image.status === 'success' && image.src && (
+                <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                    onClick={() => handleRegenerateSingle(index)}
+                    className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                    title="Regenerate this image">
+                    <RegenerateIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                    onClick={() => handleDownload(image.src!)} 
+                    className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                    title="Download as PNG">
+                    <DownloadIcon className="w-5 h-5" />
+                    </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
