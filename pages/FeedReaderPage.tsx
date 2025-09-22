@@ -9,7 +9,7 @@ import ArticleCardSkeleton from '../components/ArticleCardSkeleton';
 import ArticleDetailView from '../components/ArticleDetailView';
 import PasswordModal from '../components/PasswordModal';
 
-const DEFAULT_FEED_URL = 'https://www.imagenbrainai.in/feeds/posts/default?alt=rss';
+const DEFAULT_FEED_URL = 'https://seedream-imagenbrainai.blogspot.com/feeds/posts/default?alt=rss';
 const ARTICLES_PER_PAGE = 25;
 const SAVED_URL_KEY = 'rssFeedUrl';
 const ADMIN_PASSWORD = 'Kunal@#&23KL';
