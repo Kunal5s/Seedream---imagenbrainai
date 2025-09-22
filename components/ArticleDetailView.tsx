@@ -49,9 +49,6 @@ const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ article, allArtic
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-100 leading-tight mb-4">{article.title}</h1>
                 <div className="flex flex-wrap items-center justify-between text-sm text-gray-500 mb-6 pb-6 border-b border-gray-700 gap-4">
                     <span>{new Date(article.pubDate).toLocaleString()}</span>
-                    <a href={article.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-green-300 transition-colors">
-                        View Original <ExternalLinkIcon className="w-4 h-4" />
-                    </a>
                 </div>
 
                 <div 

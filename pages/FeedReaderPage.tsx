@@ -165,13 +165,11 @@ const FeedReaderPage: React.FC = () => {
     
     const selectedArticle = useMemo(() => {
         if (!params.articleIdentifier || articles.length === 0) return null;
-        const parts = params.articleIdentifier.split('-');
-        const articleId = parts[parts.length - 1];
-        return articles.find(a => a.id === articleId);
+        return articles.find(a => a.slug === params.articleIdentifier);
     }, [params.articleIdentifier, articles]);
 
     const handleSelectArticle = (article: Article) => {
-        navigate(`/feed-reader/article/${article.slug}-${article.id}`);
+        navigate(`/feed-reader/article/${article.slug}`);
         window.scrollTo(0, 0);
     };
     
@@ -216,13 +214,13 @@ const FeedReaderPage: React.FC = () => {
 
     return (
         <>
-            <MetaTags title="RSS Feed Reader | Seedream ImagenBrainAi 4.0" description="Stay updated with the latest news and articles from top tech and creative sources." canonicalPath="/feed-reader" />
+            <MetaTags title="Seedream Imagenbrainai Blog Reader | Seedream ImagenBrainAi 4.0" description="Stay updated with the latest news and articles from top tech and creative sources." canonicalPath="/feed-reader" />
             <PasswordModal show={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onSuccess={() => { setIsUrlUnlocked(true); setIsPasswordModalOpen(false); }} correctPassword={ADMIN_PASSWORD} />
             <div className="max-w-4xl mx-auto">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
-                            AI-Powered RSS Reader
+                            Seedream Imagenbrainai Blog Reader
                         </span>
                     </h1>
                     <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">

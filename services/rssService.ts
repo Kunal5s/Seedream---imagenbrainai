@@ -78,6 +78,18 @@ const getThumbnail = (item: Element): string | null => {
     return null;
 };
 
+const getDescriptionFromContent = (html: string): string => {
+    try {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const text = doc.body.textContent || "";
+        return text.replace(/\s+/g, ' ').trim().substring(0, 250);
+    } catch (e) {
+        // Fallback for environments where DOMParser might not be fully available or for malformed content
+        return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 250);
+    }
+};
+
+
 /**
  * Fetches and parses an RSS/Atom feed from a given URL via a public proxy.
  * Supports pagination for Blogger-based feeds.
@@ -136,7 +148,7 @@ export const fetchAndParseRssFeed = async (url: string, startIndex = 1, maxResul
             const pubDate = getNodeValue(item, ['pubDate', 'published', 'updated']);
             const guid = getNodeValue(item, ['guid', 'id']) || link;
             const content = getFullContent(item);
-            const description = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 250);
+            const description = getDescriptionFromContent(content);
 
             // Generate slug and extract unique ID for permalinks
             const slug = slugify(title);
