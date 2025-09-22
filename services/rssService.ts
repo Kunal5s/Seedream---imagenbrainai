@@ -1,6 +1,22 @@
 import { RssChannel, Article } from '../data/rssData';
 
 /**
+ * Converts a string into a URL-friendly slug.
+ * @param text The text to convert.
+ * @returns A URL-friendly slug string.
+ */
+const slugify = (text: string): string => {
+    return text
+        .toString()
+        .toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start of text
+        .replace(/-+$/, '');            // Trim - from end of text
+};
+
+/**
  * Intelligently enhances thumbnail URLs from Blogger/Google feeds.
  * Replaces low-resolution size parameters (e.g., /s72-c/) with a high-quality,
  * consistently sized equivalent (/w400-h225-c/) for crisp, clear visuals.
@@ -10,23 +26,14 @@ import { RssChannel, Article } from '../data/rssData';
 const enhanceBloggerThumbnail = (url: string | null): string | null => {
     if (!url) return null;
     try {
-        // This regex is designed to find Blogger/Google user content image URLs
-        // and replace the size parameter (like s72-c, s1600, w200-h100) with a specific high-quality one.
         return url.replace(/\/(s\d+(-[a-zA-Z])?|w\d+-h\d+(-[a-zA-Z])?)\//, '/w400-h225-c/');
     } catch {
-        return url; // Return original URL if regex fails
+        return url;
     }
 };
 
-/**
- * Gets the text content from the first matching tag in a list of potential tags.
- * @param node The parent element to search within.
- * @param tags An array of tag names to check in order.
- * @returns The text content of the first found element, or an empty string.
- */
 const getNodeValue = (node: Element | Document, tags: string[]): string => {
     for (const tag of tags) {
-        // Correctly escape the colon for querySelector, which is needed for namespaced tags.
         const selector = tag.replace(':', '\\:');
         const element = node.querySelector(selector);
         if (element?.textContent) {
@@ -36,52 +43,33 @@ const getNodeValue = (node: Element | Document, tags: string[]): string => {
     return '';
 };
 
-/**
- * Extracts the full HTML content of an article by checking various tags in order of preference.
- * This is the core fix for the querySelector error.
- * @param item The <item> or <entry> element.
- * @returns The full HTML content as a string.
- */
 const getFullContent = (item: Element): string => {
-    // 1. Try 'content:encoded' first, as it's typically the full post in RSS.
-    // The selector needs to have the colon escaped for querySelector.
     const contentEncoded = item.querySelector('content\\:encoded');
     if (contentEncoded?.textContent) return contentEncoded.textContent.trim();
     
-    // 2. Try Atom's 'content' tag.
     const content = item.querySelector('content');
     if (content?.textContent) return content.textContent.trim();
 
-    // 3. Fall back to RSS 'description' which often contains the full HTML.
     const description = item.querySelector('description');
     if (description?.textContent) return description.textContent.trim();
 
-    // 4. Fall back to Atom's 'summary'.
     const summary = item.querySelector('summary');
     if (summary?.textContent) return summary.textContent.trim();
 
     return '';
 }
 
-/**
- * Extracts a thumbnail image from various possible tags within an item.
- * @param item The <item> or <entry> element.
- * @returns A URL string for the thumbnail, or null if not found.
- */
 const getThumbnail = (item: Element): string | null => {
-    // Try media:content first (common in many feeds)
     const mediaContent = item.querySelector('media\\:content');
     if (mediaContent && mediaContent.getAttribute('url')) {
         return mediaContent.getAttribute('url');
     }
 
-    // Try enclosure tag (standard in RSS 2.0)
     const enclosure = item.querySelector('enclosure');
     if (enclosure && enclosure.getAttribute('url') && enclosure.getAttribute('type')?.startsWith('image/')) {
         return enclosure.getAttribute('url');
     }
 
-    // Try parsing the first <img> tag from the full content HTML as a last resort
     const contentHtml = getFullContent(item);
     const match = contentHtml.match(/<img[^>]+src="([^">]+)"/);
     if (match && match[1]) {
@@ -89,7 +77,6 @@ const getThumbnail = (item: Element): string | null => {
     }
     return null;
 };
-
 
 /**
  * Fetches and parses an RSS/Atom feed from a given URL via a public proxy.
@@ -102,7 +89,6 @@ const getThumbnail = (item: Element): string | null => {
 export const fetchAndParseRssFeed = async (url: string, startIndex = 1, maxResults = 25): Promise<{ channel: RssChannel; articles: Article[] }> => {
     try {
         let feedUrl = url;
-        // Check if it's a Blogger-like feed to apply pagination
         if (url.includes('/feeds/posts/default')) {
             const urlObject = new URL(url);
             urlObject.searchParams.set('start-index', String(startIndex));
@@ -125,7 +111,6 @@ export const fetchAndParseRssFeed = async (url: string, startIndex = 1, maxResul
 
         const parseError = doc.querySelector("parsererror");
         if (parseError) {
-            console.error("XML Parse Error:", parseError.textContent);
             throw new Error("Failed to parse the feed. The source may not be a valid XML format.");
         }
 
@@ -148,17 +133,20 @@ export const fetchAndParseRssFeed = async (url: string, startIndex = 1, maxResul
             const linkNode = item.querySelector('link');
             const link = linkNode?.getAttribute('href') || linkNode?.textContent?.trim() || '';
             
-            // Use the robust getNodeValue for tags that can have different names
             const pubDate = getNodeValue(item, ['pubDate', 'published', 'updated']);
             const guid = getNodeValue(item, ['guid', 'id']) || link;
-
             const content = getFullContent(item);
-            
-            // For the preview description, create a stripped, shortened plain text version
             const description = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 250);
+
+            // Generate slug and extract unique ID for permalinks
+            const slug = slugify(title);
+            const idMatch = guid.match(/\.post-(\d+)$/);
+            const id = idMatch ? idMatch[1] : guid;
             
             return {
                 guid,
+                id,
+                slug,
                 link,
                 title,
                 pubDate,
@@ -174,9 +162,6 @@ export const fetchAndParseRssFeed = async (url: string, startIndex = 1, maxResul
     } catch (error) {
         console.error(`Error fetching or parsing feed from ${url}:`, error);
         if (error instanceof Error) {
-            if (error.message.includes("parse")) {
-                 throw new Error("The feed was fetched, but its content is not valid RSS/Atom XML.");
-            }
             throw error;
         }
         throw new Error("An unknown error occurred while processing the feed.");

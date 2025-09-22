@@ -2,6 +2,8 @@
 
 export interface Article {
   guid: string;
+  id: string; // Extracted from GUID for unique identification
+  slug: string; // Generated from title for user-friendly URLs
   link: string;
   title: string;
   pubDate: string;

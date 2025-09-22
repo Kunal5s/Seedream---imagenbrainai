@@ -28,7 +28,7 @@ const App: React.FC = () => {
             <ReactRouterDom.Route path="/disclaimer" element={<DisclaimerPage />} />
             <ReactRouterDom.Route path="/features" element={<FeaturesPage />} />
             <ReactRouterDom.Route path="/feed-reader" element={<FeedReaderPage />} />
-            <ReactRouterDom.Route path="/feed-reader/article/:guid" element={<FeedReaderPage />} />
+            <ReactRouterDom.Route path="/feed-reader/article/:articleIdentifier" element={<FeedReaderPage />} />
             <ReactRouterDom.Route path="/faq" element={<FaqPage />} />
           </ReactRouterDom.Routes>
         </main>

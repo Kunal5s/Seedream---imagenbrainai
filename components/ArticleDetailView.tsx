@@ -7,7 +7,7 @@ interface ArticleDetailViewProps {
   article: Article;
   allArticles: Article[];
   onBack: () => void;
-  onInternalLinkClick: (guid: string) => void;
+  onInternalLinkClick: (article: Article) => void;
 }
 
 const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ article, allArticles, onBack, onInternalLinkClick }) => {
@@ -17,20 +17,23 @@ const ArticleDetailView: React.FC<ArticleDetailViewProps> = ({ article, allArtic
         const contentEl = contentRef.current;
         if (!contentEl) return;
 
-        // Find links within the article content that point to other articles in the feed
         const links = contentEl.querySelectorAll('a');
         links.forEach(link => {
             const matchingArticle = allArticles.find(a => a.link === link.href);
-            // If a match is found, override its click behavior to navigate internally
             if (matchingArticle) {
-                link.addEventListener('click', (e) => {
+                const clickHandler = (e: MouseEvent) => {
                     e.preventDefault();
-                    onInternalLinkClick(matchingArticle.guid);
-                });
-                // Style the link to indicate it's an internal, clickable article link
+                    onInternalLinkClick(matchingArticle);
+                };
+                link.addEventListener('click', clickHandler);
                 link.style.textDecoration = 'underline';
                 link.style.color = '#6ee7b7';
                 link.style.cursor = 'pointer';
+                
+                // Return a cleanup function to remove the event listener
+                return () => {
+                    link.removeEventListener('click', clickHandler);
+                };
             }
         });
         

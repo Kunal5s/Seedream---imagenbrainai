@@ -5,12 +5,14 @@ import MetaTags from '../components/MetaTags';
 import { RssChannel, Article } from '../data/rssData';
 import { fetchAndParseRssFeed } from '../services/rssService';
 import Spinner from '../components/ui/Spinner';
-import RefreshIcon from '../components/ui/RefreshIcon';
 import ArticleCardSkeleton from '../components/ArticleCardSkeleton';
 import ArticleDetailView from '../components/ArticleDetailView';
+import PasswordModal from '../components/PasswordModal';
 
 const DEFAULT_FEED_URL = 'https://www.imagenbrainai.in/feeds/posts/default?alt=rss';
 const ARTICLES_PER_PAGE = 25;
+const SAVED_URL_KEY = 'rssFeedUrl';
+const ADMIN_PASSWORD = 'Kunal@#&23KL';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -35,11 +37,12 @@ const itemVariants: Variants = {
 };
 
 const FeedReaderPage: React.FC = () => {
-    const params = ReactRouterDom.useParams<{ guid?: string }>();
+    const params = ReactRouterDom.useParams<{ articleIdentifier?: string }>();
     const navigate = ReactRouterDom.useNavigate();
 
-    const [feedUrl, setFeedUrl] = useState<string>(DEFAULT_FEED_URL);
-    const [submittedUrl, setSubmittedUrl] = useState<string>(DEFAULT_FEED_URL);
+    const [savedUrl, setSavedUrl] = useState<string>(() => localStorage.getItem(SAVED_URL_KEY) || DEFAULT_FEED_URL);
+    const [inputUrl, setInputUrl] = useState<string>(savedUrl);
+    
     const [channel, setChannel] = useState<RssChannel | null>(null);
     const [articles, setArticles] = useState<Article[]>([]);
     
@@ -51,19 +54,15 @@ const FeedReaderPage: React.FC = () => {
     const [startIndex, setStartIndex] = useState<number>(1);
     const [hasMore, setHasMore] = useState<boolean>(true);
 
-    const observer = useRef<IntersectionObserver | null>(null);
-    const lastArticleElementRef = useCallback((node: HTMLDivElement) => {
-        if (isLoading || isLoadingMore || !hasMore) return;
-        if (observer.current) observer.current.disconnect();
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting) {
-                loadMoreArticles();
-            }
-        });
-        if (node) observer.current.observe(node);
-    }, [isLoading, isLoadingMore, hasMore]);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [isUrlUnlocked, setIsUrlUnlocked] = useState(false);
 
     const loadFeed = useCallback(async (url: string, isRefresh = false) => {
+        if (!url) {
+            setIsLoading(false);
+            setError("No RSS feed URL has been set.");
+            return;
+        }
         if (!isRefresh) {
             setIsLoading(true);
             setArticles([]);
@@ -86,36 +85,47 @@ const FeedReaderPage: React.FC = () => {
             if (!isRefresh) setIsLoading(false);
         }
     }, []);
-
+    
+    // Initial load from saved URL
+    useEffect(() => {
+        loadFeed(savedUrl);
+    }, [savedUrl, loadFeed]);
+    
     const loadMoreArticles = useCallback(async () => {
         if (isLoadingMore || !hasMore) return;
         setIsLoadingMore(true);
         try {
-            const { articles: newArticles } = await fetchAndParseRssFeed(submittedUrl, startIndex, ARTICLES_PER_PAGE);
+            const { articles: newArticles } = await fetchAndParseRssFeed(savedUrl, startIndex, ARTICLES_PER_PAGE);
             setArticles(prev => [...prev, ...newArticles]);
             setHasMore(newArticles.length === ARTICLES_PER_PAGE);
             setStartIndex(prev => prev + ARTICLES_PER_PAGE);
         } catch (err) {
-            // Don't show a big error, just stop loading more
             setHasMore(false);
             console.error("Failed to load more articles:", err);
         } finally {
             setIsLoadingMore(false);
         }
-    }, [submittedUrl, startIndex, isLoadingMore, hasMore]);
+    }, [savedUrl, startIndex, isLoadingMore, hasMore]);
 
-    // Initial load
-    useEffect(() => {
-        loadFeed(submittedUrl);
-    }, [submittedUrl, loadFeed]);
-    
+    const observer = useRef<IntersectionObserver | null>(null);
+    const lastArticleElementRef = useCallback((node: HTMLDivElement) => {
+        if (isLoading || isLoadingMore || !hasMore) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) {
+                loadMoreArticles();
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [isLoading, isLoadingMore, hasMore, loadMoreArticles]);
+
     // Polling for new articles
     useEffect(() => {
         const pollInterval = setInterval(async () => {
-            if (isPolling || !submittedUrl || document.hidden) return; // Don't poll if tab is not active
+            if (isPolling || !savedUrl || document.hidden) return;
             setIsPolling(true);
             try {
-                const { articles: latestArticles } = await fetchAndParseRssFeed(submittedUrl, 1, 5); // check first 5 for new
+                const { articles: latestArticles } = await fetchAndParseRssFeed(savedUrl, 1, 5);
                 setArticles(prevArticles => {
                     const existingGuids = new Set(prevArticles.map(a => a.guid));
                     const newArticles = latestArticles.filter(a => !existingGuids.has(a.guid));
@@ -129,37 +139,39 @@ const FeedReaderPage: React.FC = () => {
             } finally {
                 setIsPolling(false);
             }
-        }, 60000); // Poll every 60 seconds
+        }, 60000); // 60 seconds
         return () => clearInterval(pollInterval);
-    }, [submittedUrl, isPolling]);
+    }, [savedUrl, isPolling]);
 
     // Background fetching for older articles
     useEffect(() => {
          const backgroundFetchInterval = setInterval(() => {
-            if (!document.hidden && hasMore && !isLoadingMore) { // only fetch if tab is active, there are more articles, and not already loading
+            if (!document.hidden && hasMore && !isLoadingMore) {
                 loadMoreArticles();
             }
-        }, 300000); // every 5 minutes
-
+        }, 120000); // every 2 minutes
         return () => clearInterval(backgroundFetchInterval);
     }, [hasMore, isLoadingMore, loadMoreArticles]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const trimmedUrl = feedUrl.trim();
-        if (trimmedUrl && trimmedUrl !== submittedUrl) {
-            setSubmittedUrl(trimmedUrl);
+        const trimmedUrl = inputUrl.trim();
+        if (trimmedUrl) {
+            localStorage.setItem(SAVED_URL_KEY, trimmedUrl);
+            setSavedUrl(trimmedUrl);
+            setIsUrlUnlocked(false);
         }
     };
     
     const selectedArticle = useMemo(() => {
-        if (!params.guid || articles.length === 0) return null;
-        const decodedGuid = decodeURIComponent(params.guid);
-        return articles.find(a => a.guid === decodedGuid);
-    }, [params.guid, articles]);
+        if (!params.articleIdentifier || articles.length === 0) return null;
+        const parts = params.articleIdentifier.split('-');
+        const articleId = parts[parts.length - 1];
+        return articles.find(a => a.id === articleId);
+    }, [params.articleIdentifier, articles]);
 
-    const handleSelectArticle = (guid: string) => {
-        navigate(`/feed-reader/article/${encodeURIComponent(guid)}`);
+    const handleSelectArticle = (article: Article) => {
+        navigate(`/feed-reader/article/${article.slug}-${article.id}`);
         window.scrollTo(0, 0);
     };
     
@@ -168,25 +180,15 @@ const FeedReaderPage: React.FC = () => {
     };
 
     const renderArticleList = () => (
-        <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-4"
-        >
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
             {articles.map((article, index) => (
                 <motion.div
                     key={article.guid}
                     variants={itemVariants}
                     ref={index === articles.length - 1 ? lastArticleElementRef : null}
                 >
-                    <button 
-                        onClick={() => handleSelectArticle(article.guid)}
-                        className="w-full text-left bg-gray-900 p-4 rounded-lg border border-gray-800 hover:border-green-400/50 transition-all duration-300 flex gap-4 items-start group relative"
-                    >
-                        {article.isNew && (
-                             <span className="absolute top-2 right-2 text-xs bg-green-500 text-black font-bold px-2 py-0.5 rounded-full animate-pulse">New</span>
-                        )}
+                    <button onClick={() => handleSelectArticle(article)} className="w-full text-left bg-gray-900 p-4 rounded-lg border border-gray-800 hover:border-green-400/50 transition-all duration-300 flex gap-4 items-start group relative">
+                        {article.isNew && <span className="absolute top-2 right-2 text-xs bg-green-500 text-black font-bold px-2 py-0.5 rounded-full animate-pulse">New</span>}
                         {article.thumbnail && (
                             <div className="w-24 h-24 sm:w-32 sm:h-24 bg-gray-800 rounded-md flex-shrink-0 overflow-hidden">
                                 <img src={article.thumbnail} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
@@ -206,8 +208,8 @@ const FeedReaderPage: React.FC = () => {
     if (selectedArticle) {
         return (
             <>
-                <MetaTags title={`${selectedArticle.title} | Feed Reader`} description={selectedArticle.description} canonicalPath={`/feed-reader/article/${params.guid}`} />
-                <ArticleDetailView article={selectedArticle} allArticles={articles} onBack={handleBack} onInternalLinkClick={handleSelectArticle} />
+                <MetaTags title={`${selectedArticle.title} | Feed Reader`} description={selectedArticle.description} canonicalPath={`/feed-reader/article/${params.articleIdentifier}`} />
+                <ArticleDetailView article={selectedArticle} allArticles={articles} onBack={handleBack} onInternalLinkClick={(article) => handleSelectArticle(article)} />
             </>
         )
     }
@@ -215,6 +217,7 @@ const FeedReaderPage: React.FC = () => {
     return (
         <>
             <MetaTags title="RSS Feed Reader | Seedream ImagenBrainAi 4.0" description="Stay updated with the latest news and articles from top tech and creative sources." canonicalPath="/feed-reader" />
+            <PasswordModal show={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)} onSuccess={() => { setIsUrlUnlocked(true); setIsPasswordModalOpen(false); }} correctPassword={ADMIN_PASSWORD} />
             <div className="max-w-4xl mx-auto">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
@@ -223,53 +226,37 @@ const FeedReaderPage: React.FC = () => {
                         </span>
                     </h1>
                     <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
-                        Enter any RSS feed URL to read articles. The feed will auto-refresh with new content.
+                        Your personal feed, automatically updated with the latest content.
                     </p>
                 </div>
 
                 <div className="bg-gray-900/50 border border-green-400/10 rounded-lg p-4 sm:p-6">
-                    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 mb-6 pb-6 border-b border-gray-700">
-                         <input
-                            type="url"
-                            value={feedUrl}
-                            onChange={(e) => setFeedUrl(e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-md p-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
-                            placeholder="https://example.com/feed.xml"
-                            aria-label="RSS Feed URL"
-                            required
-                        />
-                         <button type="submit" disabled={isLoading} className="bg-green-500 text-black font-bold py-3 px-6 rounded-lg transition-colors hover:bg-green-400 disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0">
-                             {isLoading ? 'Loading...' : 'Load Feed'}
-                         </button>
-                    </form>
+                    <AnimatePresence mode="wait">
+                        {isUrlUnlocked ? (
+                            <motion.form key="form" onSubmit={handleSubmit} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex flex-col sm:flex-row gap-4 mb-6 pb-6 border-b border-gray-700">
+                                <input type="url" value={inputUrl} onChange={(e) => setInputUrl(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-md p-3" placeholder="https://example.com/feed.xml" required />
+                                <button type="submit" disabled={isLoading} className="bg-green-500 text-black font-bold py-3 px-6 rounded-lg">Update Feed</button>
+                            </motion.form>
+                        ) : (
+                            <motion.div key="title" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mb-6 pb-6 border-b border-gray-700 text-center">
+                                <h2 className="text-2xl font-bold text-gray-100 mb-1">{channel?.title || 'Loading Feed...'}</h2>
+                                <button onClick={() => setIsPasswordModalOpen(true)} className="text-sm text-green-300 hover:text-green-200 transition-colors">Click here to change feed URL</button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                     
-                    {isLoading && (
-                        <div className="space-y-4">
-                            {Array.from({ length: 5 }).map((_, i) => <ArticleCardSkeleton key={i} />)}
-                        </div>
-                    )}
+                    {isLoading && <div className="space-y-4">{Array.from({ length: 5 }).map((_, i) => <ArticleCardSkeleton key={i} />)}</div>}
                     
                     {error && !isLoading && (
                         <div className="text-center text-red-400 py-12 bg-red-900/20 rounded-lg">
                             <h2 className="text-xl font-bold mb-2">Failed to Load Feed</h2>
                             <p className="text-sm max-w-md mx-auto">{error}</p>
-                            <p className="text-xs text-gray-500 mt-4">Please check that the URL is correct and points to a valid RSS/Atom feed. Some feeds may be temporarily unavailable or block requests.</p>
                         </div>
                     )}
                     
-                    {!isLoading && !error && articles.length > 0 && channel && (
-                        <div>
-                             <h2 className="text-2xl font-bold text-gray-100 mb-1">{channel.title}</h2>
-                             <p className="text-gray-400 mb-6">{channel.description}</p>
-                             {renderArticleList()}
-                        </div>
-                    )}
+                    {!isLoading && !error && articles.length > 0 && renderArticleList()}
 
-                    {isLoadingMore && (
-                        <div className="flex justify-center py-8">
-                             <Spinner />
-                        </div>
-                    )}
+                    {isLoadingMore && <div className="flex justify-center py-8"><Spinner /></div>}
 
                     {!isLoading && !error && articles.length === 0 && (
                          <div className="text-center text-gray-500 py-12">

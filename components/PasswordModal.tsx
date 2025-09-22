@@ -14,14 +14,12 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ show, onClose, onSuccess,
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const expectedPassword = correctPassword || process.env.ADMIN_PASSWORD || 'admin';
+  const expectedPassword = correctPassword || 'admin';
 
   useEffect(() => {
     if (show) {
-      // Focus the input when the modal opens
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
-      // Reset state when modal closes
       setPassword('');
       setError(null);
     }
@@ -42,7 +40,6 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ show, onClose, onSuccess,
     <AnimatePresence>
       {show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -52,7 +49,6 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ show, onClose, onSuccess,
             aria-hidden="true"
           />
 
-          {/* Modal Content */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -64,10 +60,10 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ show, onClose, onSuccess,
             className="relative bg-gray-900 border border-green-400/20 rounded-lg shadow-2xl shadow-green-500/10 w-full max-w-md p-8"
           >
             <h2 id="password-modal-title" className="text-2xl font-bold text-center text-green-300 mb-4">
-              Access Required
+              Change Feed URL
             </h2>
             <p className="text-center text-gray-400 mb-6">
-              This area is protected. Please enter the password to continue.
+              Please enter the password to unlock the settings.
             </p>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
