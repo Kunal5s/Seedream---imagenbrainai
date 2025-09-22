@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
 import * as ReactRouterDom from 'react-router-dom';
 import MetaTags from '../components/MetaTags';
 import { motion, Variants } from 'framer-motion';
-import { blogPosts } from '../data/blogPosts';
 import { BlogPost } from '../data/blogData';
+import { getArticles } from '../services/articleService';
+import Spinner from '../components/ui/Spinner';
 
 // Staggered animation for the container of the blog posts
 const containerVariants: Variants = {
@@ -31,14 +32,48 @@ const cardVariants: Variants = {
 };
 
 const BlogPage: React.FC = () => {
-  const posts: BlogPost[] = blogPosts;
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadArticles = async () => {
+      try {
+        setIsLoading(true);
+        const fetchedPosts = await getArticles();
+        setPosts(fetchedPosts);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load articles.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadArticles();
+  }, []);
 
   const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex justify-center py-20">
+          <Spinner />
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+       <div className="text-center text-red-400 py-20 bg-red-900/20 rounded-lg">
+         <h2 className="text-2xl font-bold mb-2">Error Loading Posts</h2>
+         <p>{error}</p>
+       </div>
+     );
+   }
+
     if (posts.length === 0) {
       return (
         <div className="text-center text-gray-500 py-20">
           <h2 className="text-2xl font-bold mb-2">No Articles Found</h2>
-          <p>There are currently no articles on the blog. Please check back later.</p>
+          <p>The blog feed appears to be empty. Please check back later.</p>
         </div>
       );
     }
@@ -101,6 +136,7 @@ const BlogPage: React.FC = () => {
             Insights, tutorials, and inspiration for the future of creativity.
           </p>
         </div>
+        
         {renderContent()}
       </div>
     </>

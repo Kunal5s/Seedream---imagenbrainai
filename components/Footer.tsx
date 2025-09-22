@@ -1,17 +1,17 @@
 import React from 'react';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
 import * as ReactRouterDom from 'react-router-dom';
-import FooterBlogFeed from './FooterBlogFeed';
 
 const Footer: React.FC = () => {
   const quickLinks = [
     { name: 'About Us', path: '/about' },
     { name: 'Contact Us', path: '/contact' },
     { name: 'Features', path: '/features' },
-    { name: 'Blog', path: '/blog' },
+    { name: 'RSS Reader', path: '/feed-reader' },
   ];
 
   const resourceLinks = [
+    { name: 'FAQ', path: '/faq' },
     { name: 'Privacy Policy', path: '/privacy-policy' },
     { name: 'Terms of Service', path: '/terms-of-service' },
     { name: 'Disclaimer', path: '/disclaimer' },
@@ -20,7 +20,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 border-t border-green-400/20 mt-16">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Column 1: About */}
           <div>
             <h3 className="text-xl font-bold mb-4">
@@ -48,12 +48,7 @@ const Footer: React.FC = () => {
             </ul>
           </div>
           
-          {/* Column 3: Recent Posts */}
-          <div>
-            <FooterBlogFeed />
-          </div>
-
-          {/* Column 4: Resources */}
+          {/* Column 3: Resources */}
           <div>
              <h4 className="font-semibold text-green-300 tracking-wider uppercase mb-4">Resources</h4>
              <ul className="space-y-2">

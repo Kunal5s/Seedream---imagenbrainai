@@ -1,6 +1,7 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/api/pollinations", "destination": "/api/pollinations" },
+    { "source": "/api/rss-fetcher", "destination": "/api/rss-fetcher" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

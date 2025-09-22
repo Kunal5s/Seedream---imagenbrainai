@@ -1,13 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
 import * as ReactRouterDom from 'react-router-dom';
-import { blogPosts } from '../data/blogPosts';
 import { BlogPost } from '../data/blogData';
+import { getArticles } from '../services/articleService';
 
 const FooterBlogFeed: React.FC = () => {
-  const posts: BlogPost[] = blogPosts.slice(0, 3); // Only show the 3 most recent posts
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const loadRecentPosts = async () => {
+      try {
+        const allPosts = await getArticles();
+        // Get the most recent 3 posts
+        setPosts(allPosts.slice(0, 3));
+      } catch (error) {
+        console.error("Failed to load recent posts for footer:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadRecentPosts();
+  }, []);
 
   const renderContent = () => {
+    if (isLoading) {
+      return <p className="text-gray-500 text-sm">Loading posts...</p>;
+    }
+
     if (posts.length > 0) {
       return (
         <ul className="space-y-3">

@@ -10,8 +10,8 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import DisclaimerPage from './pages/DisclaimerPage';
 import FeaturesPage from './pages/FeaturesPage';
-import BlogPage from './pages/BlogPage';
-import ArticlePage from './pages/ArticlePage';
+import FaqPage from './pages/FaqPage';
+import FeedReaderPage from './pages/FeedReaderPage';
 
 const App: React.FC = () => {
   return (
@@ -27,8 +27,8 @@ const App: React.FC = () => {
             <ReactRouterDom.Route path="/terms-of-service" element={<TermsOfServicePage />} />
             <ReactRouterDom.Route path="/disclaimer" element={<DisclaimerPage />} />
             <ReactRouterDom.Route path="/features" element={<FeaturesPage />} />
-            <ReactRouterDom.Route path="/blog" element={<BlogPage />} />
-            <ReactRouterDom.Route path="/blog/:slug" element={<ArticlePage />} />
+            <ReactRouterDom.Route path="/feed-reader" element={<FeedReaderPage />} />
+            <ReactRouterDom.Route path="/faq" element={<FaqPage />} />
           </ReactRouterDom.Routes>
         </main>
         <Footer />

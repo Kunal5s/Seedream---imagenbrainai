@@ -14,4 +14,6 @@ export interface BlogPost {
   author: string | Author; // The API returns a string, the app uses the full Author object.
   featuredImage: string | null;
   categories: string[];
+  keywords?: string[];
+  originalUrl: string;
 }
