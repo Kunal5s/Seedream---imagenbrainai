@@ -1,0 +1,19 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="1200" height="630" fill="url(#paint0_linear_1_2)"/>
+<g transform="translate(400 200) scale(4)">
+<circle cx="50" cy="50" r="48" fill="#10B981"/>
+<path d="M29.5 79C32.5 71.5 40.7 57.2 44 51.5C45.5 48.5 46.5 47 47.5 47C48.5 47 49.5 48 50 49.5C51.5 54.5 53 58.5 54.5 62C55.5 64.5 57 68 58.5 70.5C62.5 77.5 66 79 66 79H29.5Z M60.5 41C58 41 56 43 56 45.5C56 48 58 50 60.5 50C63 50 65 48 65 45.5C65 43 63 41 60.5 41Z" fill="white"/>
+</g>
+<text x="50%" y="450" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="70" font-weight="bold" fill="#D1FAE5" text-shadow="0 0 10px rgba(134,239,172,0.8)">
+    Seedream <tspan fill="#E5E7EB">ImagenBrainAi</tspan>
+</text>
+<text x="50%" y="520" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" fill="#9CA3AF">
+    Transform Ideas Into Masterpieces
+</text>
+<defs>
+<linearGradient id="paint0_linear_1_2" x1="600" y1="0" x2="600" y2="630" gradientUnits="userSpaceOnUse">
+<stop stop-color="#111827"/>
+<stop offset="1" stop-color="#000000"/>
+</linearGradient>
+</defs>
+</svg>

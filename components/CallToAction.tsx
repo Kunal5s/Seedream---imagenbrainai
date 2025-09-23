@@ -19,7 +19,7 @@ const CallToAction: React.FC = () => {
         </span>
       </h2>
       <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-        Start creating with Seedream ImagenBrainAi 4.0 today! Unleash your creativity and bring your wildest ideas to life with the power of AI.
+        Start creating with Seedream ImagenBrainAi today! Unleash your creativity and bring your wildest ideas to life with the power of AI.
       </p>
       <div className="max-w-xs mx-auto">
         <Button onClick={handleClick}>

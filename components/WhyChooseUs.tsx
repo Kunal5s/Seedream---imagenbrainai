@@ -39,7 +39,7 @@ const WhyChooseUs: React.FC = () => {
     <section>
       <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
-          Why Choose ImagenBrainAi 4.0?
+          Why Choose Seedream ImagenBrainAi?
         </span>
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
