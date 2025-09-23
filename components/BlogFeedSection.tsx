@@ -5,7 +5,7 @@ import { getArticles } from '../services/articleService';
 import Spinner from './ui/Spinner';
 import ArticleCard from './ArticleCard';
 
-const POSTS_TO_SHOW = 3; // Show only 3 posts on the homepage
+const POSTS_TO_SHOW = 20; // Show 20 posts on the homepage
 
 const BlogFeedSection: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
 import * as ReactRouterDom from 'react-router-dom';
 import MetaTags from '../components/MetaTags';
@@ -26,6 +26,25 @@ const ArticlePage: React.FC = () => {
         loadArticle();
     }
   }, [slug]);
+
+  const contentWithoutFirstImage = useMemo(() => {
+    if (!article?.content) return '';
+    // Use the browser's DOM parser to safely manipulate the HTML string
+    // This prevents the featured image from appearing a second time inside the article body.
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(article.content, 'text/html');
+        const firstImage = doc.querySelector('img');
+        if (firstImage) {
+          firstImage.remove();
+        }
+        return doc.body.innerHTML;
+    } catch (e) {
+        // Fallback in case of parsing error
+        return article.content;
+    }
+  }, [article?.content]);
+
 
   if (article === undefined) {
       return (
@@ -81,7 +100,7 @@ const ArticlePage: React.FC = () => {
             </div>
              <div 
                 className="prose prose-invert prose-lg max-w-none prose-a:text-green-300 prose-headings:text-green-200 prose-img:rounded-lg"
-                dangerouslySetInnerHTML={{ __html: article.content }} 
+                dangerouslySetInnerHTML={{ __html: contentWithoutFirstImage }} 
             />
         </article>
         
