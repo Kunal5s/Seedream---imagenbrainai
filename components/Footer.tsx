@@ -27,12 +27,9 @@ const Footer: React.FC = () => {
           {/* Column 1: About */}
           <div>
             <h3 className="text-xl font-bold mb-4">
-              <ReactRouterDom.Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                 <img src="/favicon.svg" alt="Seedream Logo" className="h-8 w-8" />
-                 <div>
-                    <span className="text-green-300">Seedream</span>
-                    <span className="text-gray-300"> ImagenBrainAi</span>
-                 </div>
+              <ReactRouterDom.Link to="/" className="hover:opacity-80 transition-opacity">
+                 <span className="text-green-300">Seedream</span>
+                 <span className="text-gray-300"> ImagenBrainAi</span>
               </ReactRouterDom.Link>
             </h3>
             <p className="text-gray-400 text-sm">

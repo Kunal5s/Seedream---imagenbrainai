@@ -9,6 +9,8 @@ import PricingSection from '../components/PricingSection';
 import HowItWorks from '../components/HowItWorks';
 import Testimonials from '../components/Testimonials';
 import CallToAction from '../components/CallToAction';
+import BlogFeedSection from '../components/BlogFeedSection';
+import HeroAnimation from '../components/HeroAnimation';
 
 // --- SVG Icons for components ---
 const CheckCircleIcon = () => (
@@ -365,7 +367,10 @@ const HomePage: React.FC = () => {
         canonicalPath="/"
       />
       <div className="space-y-24 md:space-y-32">
-        <section className="text-center pt-8">
+        <section className="text-center pt-8 md:pt-12">
+          <div className="mb-8">
+            <HeroAnimation />
+          </div>
           <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
               Transform Ideas Into Masterpieces
@@ -377,6 +382,8 @@ const HomePage: React.FC = () => {
         </section>
 
         <GeneratorSuite />
+
+        <BlogFeedSection />
         
         <CapabilitiesGrid />
 
