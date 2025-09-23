@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { generateImages } from '../services/pollinationsService';
 import { downloadImage } from '../services/geminiService';
-import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
+import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS, CREDITS_PER_IMAGE } from '../constants';
 import Button from './ui/Button';
 import Select from './ui/Select';
 import MoonLoader from './ui/MoonLoader';
@@ -10,6 +10,8 @@ import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
 import SuccessWrapper from './ui/SuccessWrapper';
 import RegenerateIcon from './ui/RegenerateIcon';
 import DownloadIcon from './ui/DownloadIcon';
+import LicenseModal from './LicenseModal';
+import { LicenseStatus, getLicenseStatus, deductCredits } from '../services/licenseService';
 
 interface ImageState {
   key: number;
@@ -35,6 +37,14 @@ const ImageGenerator: React.FC = () => {
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
   const cancelGeneration = useRef(false);
 
+  const [license, setLicense] = useState<LicenseStatus | null>(null);
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Load initial license status from localStorage
+    setLicense(getLicenseStatus());
+  }, []);
+
   useEffect(() => {
     setImages(
       Array.from({ length: numberOfImages }, (_, i) => ({
@@ -44,6 +54,10 @@ const ImageGenerator: React.FC = () => {
       }))
     );
   }, [numberOfImages]);
+  
+  const handleLicenseUpdate = () => {
+    setLicense(getLicenseStatus());
+  };
 
   const constructFinalPrompt = () => {
     let finalPrompt = prompt;
@@ -58,6 +72,12 @@ const ImageGenerator: React.FC = () => {
   const handleGenerate = async () => {
     if (!prompt) {
       setGlobalError('Please enter a prompt to generate an image.');
+      return;
+    }
+    
+    const creditCost = numberOfImages * CREDITS_PER_IMAGE;
+    if (license && license.credits < creditCost) {
+      setGlobalError(`Not enough credits. You need ${creditCost} credits but only have ${license.credits}.`);
       return;
     }
 
@@ -85,6 +105,10 @@ const ImageGenerator: React.FC = () => {
             index === i ? { ...img, status: 'success', src: imageUrls[i], key: Date.now() + i } : img
         ));
       }
+      // Deduct credits on successful generation of all images
+      const newStatus = deductCredits(creditCost);
+      setLicense(newStatus);
+
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
       setGlobalError(errorMsg);
@@ -100,6 +124,11 @@ const ImageGenerator: React.FC = () => {
   };
   
   const handleRegenerateSingle = async (index: number) => {
+    const creditCost = CREDITS_PER_IMAGE;
+    if (license && license.credits < creditCost) {
+      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits. You have ${license.credits}.` } : img));
+      return;
+    }
     if (!prompt) {
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: 'Cannot regenerate without a prompt.' } : img));
         return;
@@ -111,6 +140,8 @@ const ImageGenerator: React.FC = () => {
         setImages(prev => prev.map((img, i) => 
             i === index ? { ...img, status: 'success', src: imageUrls[0], key: Date.now() + i } : img
         ));
+        const newStatus = deductCredits(creditCost);
+        setLicense(newStatus);
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
@@ -121,8 +152,32 @@ const ImageGenerator: React.FC = () => {
     downloadImage(imageUrl, prompt, 'png');
   };
   
+  const creditsNeeded = numberOfImages * CREDITS_PER_IMAGE;
+  const hasEnoughCredits = license ? license.credits >= creditsNeeded : false;
+
   return (
     <div className="space-y-6">
+      <LicenseModal 
+        show={isLicenseModalOpen}
+        onClose={() => setIsLicenseModalOpen(false)}
+        onSuccess={handleLicenseUpdate}
+      />
+      <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="text-center sm:text-left">
+              <span className="font-semibold text-green-300">Plan:</span>
+              <span className="ml-2 text-gray-300">{license?.plan || 'Loading...'}</span>
+          </div>
+          <div className="text-center sm:text-left">
+              <span className="font-semibold text-green-300">Credits:</span>
+              <span className="ml-2 text-gray-300">{license?.credits ?? '...'}</span>
+          </div>
+          <button 
+            onClick={() => setIsLicenseModalOpen(true)}
+            className="w-full sm:w-auto bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-500 hover:text-black"
+          >
+            Activate License
+          </button>
+      </div>
       <div>
         <label htmlFor="prompt" className="block text-lg font-medium text-green-300 mb-2">
           Describe your vision
@@ -210,9 +265,9 @@ const ImageGenerator: React.FC = () => {
            </div>
          </div>
       )}
-      <div className={isGenerating ? "bg-red-500 text-white" : ""}>
-        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt && !isGenerating}>
-            {isGenerating ? 'Stop Generating' : 'Generate Images'}
+      <div className="text-center">
+        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || isGenerating || !hasEnoughCredits}>
+            {isGenerating ? 'Stop Generating' : `Generate Images (${creditsNeeded} Credits)`}
         </Button>
       </div>
 

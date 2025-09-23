@@ -5,6 +5,7 @@ import MetaTags from '../components/MetaTags';
 import { BlogPost } from '../data/blogData';
 import { getArticleBySlug } from '../services/articleService';
 import Spinner from '../components/ui/Spinner';
+import AuthorBio from '../components/AuthorBio';
 
 const ArticlePage: React.FC = () => {
   const { slug } = ReactRouterDom.useParams<{ slug: string }>();
@@ -44,15 +45,18 @@ const ArticlePage: React.FC = () => {
    );
   }
 
-  if (!article || !article.originalUrl) {
+  if (!article) {
     return (
       <div className="text-center bg-yellow-900/20 text-yellow-300 p-6 rounded-lg max-w-4xl mx-auto" role="alert">
         <h2 className="text-2xl font-bold mb-2">404 - Article Not Found</h2>
-        <p>The requested article could not be found or does not have a valid source URL to display.</p>
+        <p>The requested article could not be found.</p>
         <ReactRouterDom.Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors mt-4 inline-block">&larr; Back to Blog</ReactRouterDom.Link>
       </div>
     );
   }
+  
+  // FIX: Simplified author handling. The service now guarantees author is always a full object.
+  const author = article.author;
 
   return (
     <>
@@ -61,25 +65,31 @@ const ArticlePage: React.FC = () => {
         description={article.excerpt}
         canonicalPath={`/blog/${article.slug}`}
       />
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-4 flex justify-between items-center">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
             <ReactRouterDom.Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors font-semibold">&larr; Back to All Articles</ReactRouterDom.Link>
-            <a href={article.originalUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-gray-400 hover:text-green-300 transition-colors">
-                Open in New Tab &rarr;
-            </a>
         </div>
-        <div 
-            className="w-full border-4 border-green-400/20 rounded-lg overflow-hidden bg-gray-800"
-            style={{ height: 'calc(100vh - 220px)' }} // Adjust height to fit within viewport minus header/footer
-        >
-            <iframe
-                src={article.originalUrl}
-                title={article.title}
-                className="w-full h-full bg-white"
-                allow="fullscreen"
-                aria-label={`Embedded content for ${article.title}`}
+        
+        <article>
+            {article.featuredImage && (
+                <img src={article.featuredImage} alt={article.title} className="w-full aspect-video object-cover rounded-lg mb-8" />
+            )}
+            <h1 className="text-3xl md:text-5xl font-extrabold text-green-300 leading-tight mb-4">{article.title}</h1>
+            <div className="flex flex-wrap items-center justify-between text-sm text-gray-500 mb-8 pb-4 border-b border-gray-700 gap-4">
+                <span>Published on {new Date(article.published).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                {author && <span>By {author.name}</span>}
+            </div>
+             <div 
+                className="prose prose-invert prose-lg max-w-none prose-a:text-green-300 prose-headings:text-green-200 prose-img:rounded-lg"
+                dangerouslySetInnerHTML={{ __html: article.content }} 
             />
-        </div>
+        </article>
+        
+        {author && (
+            <div className="mt-12 pt-8 border-t border-gray-700">
+                <AuthorBio author={author} />
+            </div>
+        )}
       </div>
     </>
   );

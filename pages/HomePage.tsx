@@ -9,7 +9,7 @@ import Testimonials from '../components/Testimonials';
 import ComparisonTable from '../components/ComparisonTable';
 import CallToAction from '../components/CallToAction';
 import ExploreUseCases from '../components/ExploreUseCases';
-import RssFeedSection from '../components/RssFeedSection';
+import BlogFeedSection from '../components/BlogFeedSection';
 
 const HomePage: React.FC = () => {
   return (
@@ -33,7 +33,7 @@ const HomePage: React.FC = () => {
 
         <GeneratorSuite />
         
-        <RssFeedSection />
+        <BlogFeedSection />
 
         <WhyChooseUs />
 

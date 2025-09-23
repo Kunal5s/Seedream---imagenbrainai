@@ -14,7 +14,7 @@ export const faqData: FaqItem[] = [
   },
   {
     question: "How does the free trial work?",
-    answer: "Our free trial provides you with 1,000 initial credits to explore all core features for 7 days, letting you experience the platform's power.",
+    answer: "You can start for free right away! We provide you with 500 initial credits to explore all the core features. Once your credits run out, you can purchase a plan to get more.",
   },
   {
     question: "What kind of styles can I create?",
