@@ -46,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: 'A valid `url` query parameter is required.' });
     }
 
-    const CACHE_TTL = 3600; // Cache for 1 hour
+    const CACHE_TTL = 30; // Cache for 30 seconds
     const urlSlug = slugify(url);
     const page = Math.floor(parseInt(startIndex as string, 10) / parseInt(maxResults as string, 10)) + 1;
     const cacheKey = `blogger-feed:${urlSlug}:page:${page}`;
@@ -56,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const cachedData = await kv.get<{ channel: RssChannel; articles: Article[] }>(cacheKey);
         if (cachedData) {
             res.setHeader('X-Cache', 'HIT');
-            res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate, public, max-age=60');
+            res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate, public, max-age=30');
             return res.status(200).json(cachedData);
         }
 
@@ -109,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await kv.set(cacheKey, responsePayload, { ex: CACHE_TTL });
         
         // Set browser and CDN caching headers for the initial response
-        res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate, public, max-age=300');
+        res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate, public, max-age=30');
         
         return res.status(200).json(responsePayload);
 

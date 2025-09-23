@@ -7,6 +7,7 @@ import { BlogPost } from '../data/blogData';
 import { getArticles } from '../services/articleService';
 import Spinner from '../components/ui/Spinner';
 import ArticleCard from '../components/ArticleCard';
+import RefreshIcon from '../components/ui/RefreshIcon';
 
 // Staggered animation for the container of the blog posts
 const containerVariants: Variants = {
@@ -22,22 +23,37 @@ const containerVariants: Variants = {
 const BlogPage: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        setIsLoading(true);
-        const fetchedPosts = await getArticles();
-        setPosts(fetchedPosts);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load articles.');
-      } finally {
-        setIsLoading(false);
+  const loadArticles = async (isRefresh = false) => {
+      if (isRefresh) {
+          setIsRefreshing(true);
+      } else {
+          setIsLoading(true);
       }
-    };
+      setError(null);
+      try {
+          const fetchedPosts = await getArticles(isRefresh);
+          setPosts(fetchedPosts);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load articles.');
+      } finally {
+          if (isRefresh) {
+              setIsRefreshing(false);
+          } else {
+              setIsLoading(false);
+          }
+      }
+  };
+
+  useEffect(() => {
     loadArticles();
   }, []);
+
+  const handleRefresh = () => {
+      loadArticles(true);
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -89,11 +105,22 @@ const BlogPage: React.FC = () => {
       />
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
-              The Seedream AI Blog
-            </span>
-          </h1>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-x-4 gap-y-4 mb-4">
+                <h1 className="text-4xl md:text-6xl font-extrabold">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
+                    The Seedream AI Blog
+                    </span>
+                </h1>
+                <button
+                    onClick={handleRefresh}
+                    disabled={isRefreshing || isLoading}
+                    className="flex items-center gap-2 bg-gray-800 text-green-300 font-semibold py-2 px-4 rounded-lg border border-green-400/30 transition-all duration-300 ease-in-out transform hover:bg-green-400/10 hover:shadow-lg hover:shadow-green-400/20 focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    title="Check for new posts"
+                >
+                    <RefreshIcon className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+                </button>
+            </div>
           <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
             Insights, tutorials, and inspiration for the future of creativity.
           </p>

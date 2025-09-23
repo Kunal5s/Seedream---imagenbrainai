@@ -67,9 +67,14 @@ const transformApiArticleToBlogPost = (apiArticle: ApiArticle): BlogPost => {
  * Fetches all articles from the Blogger feed.
  * It uses a different strategy for development vs. production to ensure functionality in both environments.
  * The result is cached in memory to avoid repeated fetches during a session.
+ * @param {boolean} [forceRefresh=false] - If true, bypasses the in-memory cache.
  * @returns {Promise<BlogPost[]>} A promise that resolves to an array of all available blog posts.
  */
-export const getArticles = async (): Promise<BlogPost[]> => {
+export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => {
+  if (forceRefresh) {
+    allPostsCache = null;
+  }
+  
   if (allPostsCache) {
     return allPostsCache;
   }
@@ -152,9 +157,10 @@ export const getArticles = async (): Promise<BlogPost[]> => {
  * Finds a single blog post by its slug. It fetches all articles first (and caches them)
  * and then finds the specific one.
  * @param {string} slug The slug of the article to find.
+ * @param {boolean} [forceRefresh=false] - If true, bypasses the in-memory cache when fetching articles.
  * @returns {Promise<BlogPost | undefined>} The found blog post or undefined if not found.
  */
-export const getArticleBySlug = async (slug: string): Promise<BlogPost | undefined> => {
-  const articles = await getArticles(); // This will use the cache if available
+export const getArticleBySlug = async (slug: string, forceRefresh = false): Promise<BlogPost | undefined> => {
+  const articles = await getArticles(forceRefresh); // This will use the cache if available
   return articles.find(post => post.slug === slug);
 };
