@@ -94,7 +94,7 @@ const ArticlePage: React.FC = () => {
                 <img src={article.featuredImage} alt={article.title} className="w-full aspect-video object-cover rounded-lg mb-8" />
             )}
             <h1 className="text-3xl md:text-5xl font-extrabold text-green-300 leading-tight mb-4">{article.title}</h1>
-            <div className="flex flex-wrap items-center justify-between text-sm text-gray-500 mb-8 pb-4 border-b border-gray-700 gap-4">
+            <div className="flex flex-wrap items-center justify-between text-sm text-green-300 mb-8 pb-4 border-b border-gray-700 gap-4">
                 <span>Published on {new Date(article.published).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 {author && <span>By {author.name}</span>}
             </div>

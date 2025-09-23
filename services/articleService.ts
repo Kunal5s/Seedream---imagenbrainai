@@ -17,13 +17,21 @@ const enhanceBloggerThumbnail = (url: string | null): string | null => {
 
 const cleanTextForDev = (html: string): string => {
     if (!html) return '';
-    // 1. First, strip HTML tags
-    let text = html.replace(/<[^>]*>/g, '');
-    // 2. Decode common HTML entities
-    text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    // 3. Replace multiple whitespace characters with a single space and trim
-    text = text.replace(/\s\s+/g, ' ').trim();
-    return text;
+    try {
+        // This is the most reliable way for client-side execution.
+        // It uses the browser's own parser to strip HTML tags and decode all entities.
+        const tempEl = document.createElement('div');
+        tempEl.innerHTML = html;
+        const text = tempEl.textContent || '';
+        // Finally, normalize all whitespace (including non-breaking spaces) into single spaces.
+        return text.replace(/[\s\u00A0]+/g, ' ').trim();
+    } catch (e) {
+        console.error("DOM-based text cleaning failed, falling back to regex.", e);
+        // Fallback for any unexpected environment where document might not be available.
+        let text = html.replace(/<[^>]*>/g, '');
+        text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        return text.replace(/[\s\u00A0]+/g, ' ').trim();
+    }
 };
 
 

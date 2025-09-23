@@ -19,13 +19,19 @@ const enhanceBloggerThumbnail = (url: string | null): string | null => {
 
 const cleanText = (html: string): string => {
     if (!html) return '';
-    // 1. First, strip HTML tags
+    // This function runs on the server, so it cannot use the browser's DOM.
+    // We use a series of regular expressions for cleaning.
+    // 1. First, strip all HTML tags.
     let text = html.replace(/<[^>]*>/g, '');
-    // 2. Decode common HTML entities
-    text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    // 3. Replace multiple whitespace characters with a single space and trim
-    text = text.replace(/\s\s+/g, ' ').trim();
-    return text;
+    // 2. Decode common HTML entities. &amp; must be first to handle double-encoding like &amp;nbsp;
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&nbsp;/g, ' ');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+    // 3. Normalize all forms of whitespace (including the unicode non-breaking space) into a single space.
+    return text.replace(/[\s\u00A0]+/g, ' ').trim();
 };
 
 // --- Type definition for Blogger's JSON feed structure ---
