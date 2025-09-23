@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
             <h3 className="text-xl font-bold mb-4">
               <ReactRouterDom.Link to="/" className="hover:opacity-80 transition-opacity">
                 <span className="text-green-300">Seedream</span>
-                <span className="text-gray-300"> ImagenBrainAi 4.0</span>
+                <span className="text-gray-300"> ImagenBrainAi</span>
               </ReactRouterDom.Link>
             </h3>
             <p className="text-gray-400 text-sm">
@@ -65,7 +65,7 @@ const Footer: React.FC = () => {
         
         {/* Bottom Bar */}
         <div className="border-t border-gray-700 pt-6 text-center text-gray-500 text-sm">
-           © {new Date().getFullYear()} Seedream ImagenBrainAi 4.0. All rights reserved.
+           © {new Date().getFullYear()} Seedream ImagenBrainAi. All rights reserved.
         </div>
       </div>
     </footer>

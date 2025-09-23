@@ -9,7 +9,7 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4 py-4">
         <ReactRouterDom.Link to="/" className="text-2xl md:text-3xl font-bold tracking-wider">
           <span className="text-green-300 drop-shadow-[0_0_8px_rgba(134,239,172,0.8)]">Seedream</span>
-          <span className="text-gray-300"> ImagenBrainAi 4.0</span>
+          <span className="text-gray-300"> ImagenBrainAi</span>
         </ReactRouterDom.Link>
       </div>
     </header>

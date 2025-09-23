@@ -6,6 +6,7 @@ import { motion, Variants } from 'framer-motion';
 import { BlogPost } from '../data/blogData';
 import { getArticles } from '../services/articleService';
 import Spinner from '../components/ui/Spinner';
+import ArticleCard from '../components/ArticleCard';
 
 // Staggered animation for the container of the blog posts
 const containerVariants: Variants = {
@@ -14,19 +15,6 @@ const containerVariants: Variants = {
     opacity: 1,
     transition: {
       staggerChildren: 0.1, // This creates the sequential animation
-    },
-  },
-};
-
-// Animation for each individual blog post card
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
     },
   },
 };
@@ -86,33 +74,7 @@ const BlogPage: React.FC = () => {
         animate="visible"
       >
         {posts.map((post) => (
-          <motion.div key={post.slug} variants={cardVariants}>
-            <ReactRouterDom.Link
-              to={`/blog/${post.slug}`}
-              className="block h-full bg-gray-900 border border-green-400/20 rounded-lg overflow-hidden transform hover:scale-105 hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-green-400/20 flex flex-col group"
-            >
-              <div className="relative aspect-video bg-gray-800">
-                <img
-                  src={post.featuredImage || 'https://images.pexels.com/photos/3408744/pexels-photo-3408744.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'}
-                  alt={post.title}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-              <div className="p-6 flex flex-col flex-grow">
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {post.categories.slice(0, 2).map(cat => (
-                    <span key={cat} className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded-full">{cat}</span>
-                  ))}
-                </div>
-                <h2 className="text-xl font-bold text-green-300 mb-3 group-hover:text-green-200 transition-colors">{post.title}</h2>
-                <p className="text-gray-400 text-sm leading-relaxed flex-grow">{post.excerpt}</p>
-                <span className="mt-4 text-green-400 font-semibold text-sm self-start">
-                  Read More &rarr;
-                </span>
-              </div>
-            </ReactRouterDom.Link>
-          </motion.div>
+          <ArticleCard key={post.slug} post={post} />
         ))}
       </motion.div>
     );

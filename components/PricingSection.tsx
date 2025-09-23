@@ -70,7 +70,7 @@ const PricingSection: React.FC = () => {
         </h2>
         <p className="text-gray-400 mt-2">Choose the plan that's right for you. Start for free.</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
         {plans.map((plan: any, index: number) => (
           <div key={index} className={`bg-gray-900 border ${plan.isHighlighted ? 'border-green-400 shadow-green-400/20' : 'border-gray-700/50'} rounded-lg p-6 flex flex-col shadow-lg`}>
             <h3 className={`text-2xl font-semibold ${plan.isHighlighted ? 'text-green-300' : 'text-white'}`}>{plan.name}</h3>
