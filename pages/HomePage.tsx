@@ -10,7 +10,7 @@ import HowItWorks from '../components/HowItWorks';
 import Testimonials from '../components/Testimonials';
 import CallToAction from '../components/CallToAction';
 import BlogFeedSection from '../components/BlogFeedSection';
-import HeroAnimation from '../components/HeroAnimation';
+import HeroBackgroundAnimation from '../components/HeroBackgroundAnimation';
 
 // --- SVG Icons for components ---
 const CheckCircleIcon = () => (
@@ -283,7 +283,7 @@ const CreativeUniverseGrid: React.FC = () => (
 
 // --- New SVG Icons for Models Section ---
 const CameraIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2-2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 );
 const PaletteIconV2 = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
@@ -357,6 +357,88 @@ const OfficialModelsSection: React.FC = () => (
 );
 
 
+// --- New Hero Section Components ---
+const SparklesIconSmall = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-12v4m-2-2h4m5 4v4m-2-2h4M4 11a1 1 0 011-1h14a1 1 0 110 2H5a1 1 0 01-1-1z" /></svg>;
+const PlayIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+
+const examplePrompts = [
+    "A futuristic cityscape at night in black and white",
+    "An elegant portrait in minimalist style",
+    "Abstract geometric patterns in monochrome",
+    "A sleek modern architecture design"
+];
+
+const HeroSection: React.FC = () => {
+    const handleScrollToGenerator = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const generator = document.querySelector('#generator-suite');
+        if (generator) {
+            generator.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    return (
+        <section className="relative flex flex-col items-center justify-center text-center min-h-[80vh] py-20 overflow-hidden -mt-16">
+            <HeroBackgroundAnimation />
+            <div className="relative z-10 p-4 flex flex-col items-center">
+                <motion.h1 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="text-4xl md:text-6xl lg:text-7xl font-extrabold mb-4"
+                >
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
+                      Generate Stunning AI Images
+                    </span>
+                </motion.h1>
+                <motion.p 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+                    className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto"
+                >
+                    Imagine. Create. Transform with Seedream ImagenBrainAi.
+                </motion.p>
+
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.4 }}
+                    className="mt-8 flex flex-col sm:flex-row gap-4 justify-center"
+                >
+                    <a href="#generator-suite" onClick={handleScrollToGenerator} className="inline-flex items-center justify-center gap-2 bg-white text-black font-bold py-3 px-8 rounded-lg transition-transform duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/50">
+                        <SparklesIconSmall/> Start Creating
+                    </a>
+                    <a href="#generator-suite" onClick={handleScrollToGenerator} className="inline-flex items-center justify-center gap-2 bg-black/30 text-white font-bold py-3 px-8 rounded-lg border border-gray-600 transition-transform duration-300 transform hover:scale-105 hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-white/50">
+                        <PlayIcon /> Try for Free
+                    </a>
+                </motion.div>
+                
+                <motion.div 
+                    className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-6xl"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                        visible: { transition: { staggerChildren: 0.1, delayChildren: 0.6 } }
+                    }}
+                >
+                   {examplePrompts.map((prompt, index) => (
+                       <motion.div 
+                           key={index}
+                           variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                           className="bg-gray-900/50 backdrop-blur-sm border border-gray-700/50 rounded-lg p-4 text-center flex flex-col items-center justify-center h-36"
+                        >
+                           <div className="mb-2 p-2 bg-black/50 rounded-md"><SparklesIconSmall /></div>
+                           <p className="text-sm text-gray-300">{prompt}</p>
+                       </motion.div>
+                   ))}
+                </motion.div>
+            </div>
+        </section>
+    );
+};
+
+
 // --- Main HomePage Component ---
 const HomePage: React.FC = () => {
   return (
@@ -367,19 +449,7 @@ const HomePage: React.FC = () => {
         canonicalPath="/"
       />
       <div className="space-y-24 md:space-y-32">
-        <section className="text-center pt-8 md:pt-12">
-          <div className="mb-8">
-            <HeroAnimation />
-          </div>
-          <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
-              Transform Ideas Into Masterpieces
-            </span>
-          </h1>
-          <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
-            Welcome to Seedream ImagenBrainAi – your next-generation AI image generator. Create stunning, ultra-realistic visuals and photorealistic portraits with our advanced text-to-image technology.
-          </p>
-        </section>
+        <HeroSection />
 
         <GeneratorSuite />
 

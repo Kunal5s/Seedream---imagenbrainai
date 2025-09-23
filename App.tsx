@@ -15,13 +15,11 @@ import CommunityPage from './pages/CommunityPage';
 import FaqPage from './pages/FaqPage';
 import BlogPage from './pages/BlogPage';
 import ArticlePage from './pages/ArticlePage';
-import AnimatedBackground from './components/AnimatedBackground';
 
 const App: React.FC = () => {
   return (
     <ReactRouterDom.HashRouter>
-      <div className="min-h-screen bg-gray-900/50 bg-gradient-to-b from-black via-gray-900 to-black text-gray-200 font-sans flex flex-col">
-        <AnimatedBackground />
+      <div className="min-h-screen bg-black text-gray-200 font-sans flex flex-col">
         <div className="relative z-10 flex flex-col min-h-screen">
             <Header />
             <main className="flex-grow container mx-auto px-4 py-8">
