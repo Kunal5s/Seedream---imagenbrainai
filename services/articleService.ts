@@ -15,6 +15,18 @@ const enhanceBloggerThumbnail = (url: string | null): string | null => {
     return url.replace(/\/(s\d+(-[a-zA-Z])?|w\d+-h\d+(-[a-zA-Z])?)\//, '/w1200-h630-c/');
 };
 
+const cleanTextForDev = (html: string): string => {
+    if (!html) return '';
+    // 1. First, strip HTML tags
+    let text = html.replace(/<[^>]*>/g, '');
+    // 2. Decode common HTML entities
+    text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    // 3. Replace multiple whitespace characters with a single space and trim
+    text = text.replace(/\s\s+/g, ' ').trim();
+    return text;
+};
+
+
 // --- Interfaces for raw Blogger JSON data ---
 interface BloggerJsonFeed {
     feed: {
@@ -45,9 +57,6 @@ const authorInfo: Author = {
   location: 'Nashik, Maharashtra, India',
 };
 
-// In-memory cache for the fetched and processed articles
-let allPostsCache: BlogPost[] | null = null;
-
 const transformApiArticleToBlogPost = (apiArticle: ApiArticle): BlogPost => {
   return {
     slug: apiArticle.slug,
@@ -66,19 +75,10 @@ const transformApiArticleToBlogPost = (apiArticle: ApiArticle): BlogPost => {
 /**
  * Fetches all articles from the Blogger feed.
  * It uses a different strategy for development vs. production to ensure functionality in both environments.
- * The result is cached in memory to avoid repeated fetches during a session.
- * @param {boolean} [forceRefresh=false] - If true, bypasses the in-memory cache.
+ * @param {boolean} [forceRefresh=false] - If true, bypasses all server-side caches.
  * @returns {Promise<BlogPost[]>} A promise that resolves to an array of all available blog posts.
  */
 export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => {
-  if (forceRefresh) {
-    allPostsCache = null;
-  }
-  
-  if (allPostsCache) {
-    return allPostsCache;
-  }
-
   try {
     let apiArticles: ApiArticle[];
     const BLOGGER_BASE_URL = 'https://seedream-imagenbrainai.blogspot.com/feeds/posts/default';
@@ -109,14 +109,15 @@ export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => 
         // Transform raw Blogger data into our clean ApiArticle structure
         apiArticles = (bloggerJson.feed.entry || []).map(entry => {
             const title = entry.title.$t;
+            const content = entry.content?.$t || entry.summary?.$t || '';
             return {
                 guid: entry.id.$t,
                 slug: slugify(title),
                 link: entry.link.find((l: any) => l.rel === 'alternate')?.href || '',
                 title,
                 pubDate: entry.published.$t,
-                description: (entry.summary?.$t || entry.content?.$t || '').replace(/<[^>]*>/g, '').substring(0, 250),
-                content: entry.content?.$t || entry.summary?.$t || '',
+                description: cleanTextForDev(entry.summary?.$t || content).substring(0, 250),
+                content: content,
                 thumbnail: enhanceBloggerThumbnail(entry.media$thumbnail?.url || null),
             };
         });
@@ -124,7 +125,12 @@ export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => 
     } else {
         // --- PRODUCTION MODE: Fetch from our Vercel API endpoint ---
         const bloggerRssUrl = 'https://seedream-imagenbrainai.blogspot.com/feeds/posts/default?alt=rss';
-        const apiUrl = `/api/articles?url=${encodeURIComponent(bloggerRssUrl)}&startIndex=1&maxResults=${MAX_RESULTS}`;
+        let apiUrl = `/api/articles?url=${encodeURIComponent(bloggerRssUrl)}&startIndex=1&maxResults=${MAX_RESULTS}`;
+        
+        if (forceRefresh) {
+            // Add a parameter to bypass all server-side caches (CDN and KV)
+            apiUrl += `&noCache=true`;
+        }
         
         const response = await fetch(apiUrl);
         if (!response.ok) {
@@ -143,7 +149,7 @@ export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => 
     // The final transformation to the BlogPost format used by the UI
     const processedPosts = apiArticles.map(transformApiArticleToBlogPost);
     processedPosts.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
-    allPostsCache = processedPosts;
+
     return processedPosts;
 
   } catch (error) {
@@ -154,13 +160,12 @@ export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => 
 };
 
 /**
- * Finds a single blog post by its slug. It fetches all articles first (and caches them)
+ * Finds a single blog post by its slug. It fetches all articles first
  * and then finds the specific one.
  * @param {string} slug The slug of the article to find.
- * @param {boolean} [forceRefresh=false] - If true, bypasses the in-memory cache when fetching articles.
  * @returns {Promise<BlogPost | undefined>} The found blog post or undefined if not found.
  */
-export const getArticleBySlug = async (slug: string, forceRefresh = false): Promise<BlogPost | undefined> => {
-  const articles = await getArticles(forceRefresh); // This will use the cache if available
+export const getArticleBySlug = async (slug: string): Promise<BlogPost | undefined> => {
+  const articles = await getArticles();
   return articles.find(post => post.slug === slug);
 };

@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '@vercel/kv';
 import { RssChannel, Article } from '../data/rssData';
 
 // --- Helper Functions ---
@@ -16,6 +15,17 @@ const enhanceBloggerThumbnail = (url: string | null): string | null => {
     if (!url) return null;
     // Request a larger, widescreen image for better quality cards
     return url.replace(/\/(s\d+(-[a-zA-Z])?|w\d+-h\d+(-[a-zA-Z])?)\//, '/w1200-h630-c/');
+};
+
+const cleanText = (html: string): string => {
+    if (!html) return '';
+    // 1. First, strip HTML tags
+    let text = html.replace(/<[^>]*>/g, '');
+    // 2. Decode common HTML entities
+    text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    // 3. Replace multiple whitespace characters with a single space and trim
+    text = text.replace(/\s\s+/g, ' ').trim();
+    return text;
 };
 
 // --- Type definition for Blogger's JSON feed structure ---
@@ -40,29 +50,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
     
+    // noCache query parameter is no longer needed but we won't break old clients
     const { url, startIndex = '1', maxResults = '25' } = req.query;
 
     if (!url || typeof url !== 'string' || !url.startsWith('http')) {
         return res.status(400).json({ message: 'A valid `url` query parameter is required.' });
     }
 
-    const CACHE_TTL = 30; // Cache for 30 seconds
-    const urlSlug = slugify(url);
-    const page = Math.floor(parseInt(startIndex as string, 10) / parseInt(maxResults as string, 10)) + 1;
-    const cacheKey = `blogger-feed:${urlSlug}:page:${page}`;
-
     try {
-        // 1. Check KV Cache first
-        const cachedData = await kv.get<{ channel: RssChannel; articles: Article[] }>(cacheKey);
-        if (cachedData) {
-            res.setHeader('X-Cache', 'HIT');
-            res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate, public, max-age=30');
-            return res.status(200).json(cachedData);
-        }
-
-        res.setHeader('X-Cache', 'MISS');
-
-        // 2. If not in cache, fetch from the source using the JSON endpoint
+        // No caching - fetch directly from the source every time for real-time updates.
+        
         const feedUrl = new URL(url);
         feedUrl.searchParams.set('alt', 'json');
         feedUrl.searchParams.set('start-index', startIndex as string);
@@ -75,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const data: BloggerJsonFeed = await response.json();
 
-        // 3. Map the Blogger JSON to our clean data structure
+        // Map the Blogger JSON to our clean data structure
         const channel: RssChannel = {
             title: data.feed.title.$t,
             description: data.feed.subtitle.$t,
@@ -87,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const link = entry.link.find((l: any) => l.rel === 'alternate')?.href || '';
             const guid = entry.id.$t;
             const content = entry.content?.$t || entry.summary?.$t || '';
-            const description = (entry.summary?.$t || content).replace(/<[^>]*>/g, '').substring(0, 250);
+            const description = cleanText(entry.summary?.$t || content).substring(0, 250);
 
             return {
                 guid,
@@ -105,11 +102,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const responsePayload = { channel, articles };
 
-        // 4. Store the result in KV Cache for future requests
-        await kv.set(cacheKey, responsePayload, { ex: CACHE_TTL });
-        
-        // Set browser and CDN caching headers for the initial response
-        res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate, public, max-age=30');
+        // Set headers to explicitly prevent any client, proxy, or CDN caching.
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         
         return res.status(200).json(responsePayload);
 
