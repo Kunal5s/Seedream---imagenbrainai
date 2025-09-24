@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { generateImages } from '../services/pollinationsService';
+import { generateImages as generatePollinationsImages } from '../services/pollinationsService';
 import { downloadImage } from '../services/geminiService';
 import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS, CREDITS_PER_IMAGE } from '../constants';
 import Button from './ui/Button';
@@ -10,15 +11,22 @@ import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
 import SuccessWrapper from './ui/SuccessWrapper';
 import RegenerateIcon from './ui/RegenerateIcon';
 import DownloadIcon from './ui/DownloadIcon';
-import LicenseModal from './LicenseModal';
-import { LicenseStatus, getLicenseStatus, deductCredits } from '../services/licenseService';
+import { getAnonymousStatus, deductAnonymousCredits } from '../services/licenseService';
+import { useAuth } from '../hooks/useAuth';
 
+// FIX: Define the missing `ImageState` interface to resolve the TypeScript error.
 interface ImageState {
-  key: number;
-  src: string | null;
-  status: 'placeholder' | 'loading' | 'success' | 'error';
-  error?: string | null;
+    key: number;
+    src: string | null;
+    status: 'placeholder' | 'loading' | 'success' | 'error';
+    error?: string | null;
 }
+
+const CloudUploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l-3.75 3.75M12 9.75l3.75 3.75M3 13.5v-2.25A4.5 4.5 0 017.5 6.75h9a4.5 4.5 0 014.5 4.5v2.25m-16.5 0a4.5 4.5 0 00-1.5 3.75v2.25a1.5 1.5 0 001.5 1.5h16.5a1.5 1.5 0 001.5-1.5v-2.25a4.5 4.5 0 00-1.5-3.75m-16.5 0h16.5" />
+    </svg>
+);
 
 const ImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
@@ -37,13 +45,14 @@ const ImageGenerator: React.FC = () => {
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
   const cancelGeneration = useRef(false);
 
-  const [license, setLicense] = useState<LicenseStatus | null>(null);
-  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const { user, token, deductCredits, refreshUser, isLoading: isAuthLoading } = useAuth();
+  const [anonymousCredits, setAnonymousCredits] = useState(getAnonymousStatus().credits);
 
-  useEffect(() => {
-    // Load initial license status from localStorage
-    setLicense(getLicenseStatus());
-  }, []);
+  const [isSaving, setIsSaving] = useState<Record<number, boolean>>({});
+  const [saveStatus, setSaveStatus] = useState<Record<number, string | null>>({});
+
+  const currentCredits = user ? user.credits : anonymousCredits;
+  const isUserLoggedIn = !!user;
 
   useEffect(() => {
     setImages(
@@ -54,10 +63,6 @@ const ImageGenerator: React.FC = () => {
       }))
     );
   }, [numberOfImages]);
-  
-  const handleLicenseUpdate = () => {
-    setLicense(getLicenseStatus());
-  };
 
   const constructFinalPrompt = () => {
     let finalPrompt = prompt;
@@ -76,8 +81,8 @@ const ImageGenerator: React.FC = () => {
     }
     
     const creditCost = numberOfImages * CREDITS_PER_IMAGE;
-    if (license && license.credits < creditCost) {
-      setGlobalError(`Not enough credits. You need ${creditCost} credits but only have ${license.credits}.`);
+    if (currentCredits < creditCost) {
+      setGlobalError(`Not enough credits. You need ${creditCost} but only have ${currentCredits}. Purchase or activate a plan to continue.`);
       return;
     }
 
@@ -86,17 +91,26 @@ const ImageGenerator: React.FC = () => {
     cancelGeneration.current = false;
     
     setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
+    setSaveStatus({});
+    setIsSaving({});
 
     try {
+      if (isUserLoggedIn) {
+        await deductCredits(creditCost);
+      } else {
+        const newStatus = deductAnonymousCredits(creditCost);
+        setAnonymousCredits(newStatus.credits);
+      }
+
       const finalPrompt = constructFinalPrompt();
-      const imageUrls = await generateImages(finalPrompt, aspectRatio.aspectRatio, numberOfImages);
+      const imageUrls = await generatePollinationsImages(finalPrompt, aspectRatio.aspectRatio, numberOfImages);
       
       for (let i = 0; i < imageUrls.length; i++) {
         if (cancelGeneration.current) {
             setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
             break;
         }
-        await new Promise(resolve => setTimeout(resolve, 2500)); // ~2.5 second delay per image
+        await new Promise(resolve => setTimeout(resolve, 2500)); 
         if (cancelGeneration.current) {
           setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
           break;
@@ -105,14 +119,15 @@ const ImageGenerator: React.FC = () => {
             index === i ? { ...img, status: 'success', src: imageUrls[i], key: Date.now() + i } : img
         ));
       }
-      // Deduct credits on successful generation of all images
-      const newStatus = deductCredits(creditCost);
-      setLicense(newStatus);
 
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
       setGlobalError(errorMsg);
       setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
+      // On failure, refresh user status to 'refund' credits if logged in.
+       if (isUserLoggedIn) {
+           refreshUser();
+       }
     } finally {
       setIsGenerating(false);
     }
@@ -125,8 +140,8 @@ const ImageGenerator: React.FC = () => {
   
   const handleRegenerateSingle = async (index: number) => {
     const creditCost = CREDITS_PER_IMAGE;
-    if (license && license.credits < creditCost) {
-      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits. You have ${license.credits}.` } : img));
+    if (currentCredits < creditCost) {
+      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits. You have ${currentCredits}.` } : img));
       return;
     }
     if (!prompt) {
@@ -134,50 +149,86 @@ const ImageGenerator: React.FC = () => {
         return;
     }
     setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'loading', src: null, error: null } : img));
+    setSaveStatus(prev => ({ ...prev, [index]: null }));
+    
     try {
+        if (isUserLoggedIn) {
+            await deductCredits(creditCost);
+        } else {
+            const newStatus = deductAnonymousCredits(creditCost);
+            setAnonymousCredits(newStatus.credits);
+        }
+
         const finalPrompt = constructFinalPrompt();
-        const imageUrls = await generateImages(finalPrompt, aspectRatio.aspectRatio, 1);
+        const imageUrls = await generatePollinationsImages(finalPrompt, aspectRatio.aspectRatio, 1);
         setImages(prev => prev.map((img, i) => 
             i === index ? { ...img, status: 'success', src: imageUrls[0], key: Date.now() + i } : img
         ));
-        const newStatus = deductCredits(creditCost);
-        setLicense(newStatus);
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
+        if (isUserLoggedIn) {
+           refreshUser();
+        }
     }
   };
 
   const handleDownload = (imageUrl: string) => {
     downloadImage(imageUrl, prompt, 'png');
   };
+
+  const handleSaveToCloud = async (imageUrl: string, index: number) => {
+    if (!isUserLoggedIn || !token) {
+        setSaveStatus(prev => ({...prev, [index]: 'Error: Please log in to save images.'}));
+        return;
+    }
+    setIsSaving(prev => ({ ...prev, [index]: true }));
+    setSaveStatus(prev => ({ ...prev, [index]: null }));
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error('Failed to fetch image for saving.');
+
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = async () => {
+        const base64data = reader.result;
+        try {
+            const saveResponse = await fetch('/api/uploadToR2', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ imageData: base64data, prompt: constructFinalPrompt() }),
+            });
+
+            if (!saveResponse.ok) {
+                const errorResult = await saveResponse.json();
+                throw new Error(errorResult.message || 'Failed to save the image to the cloud.');
+            }
+            const result = await saveResponse.json();
+            setSaveStatus(prev => ({ ...prev, [index]: `Saved to profile!` }));
+        } catch (apiError) {
+             setSaveStatus(prev => ({ ...prev, [index]: `Error: ${apiError instanceof Error ? apiError.message : 'Save failed.'}` }));
+        } finally {
+            setIsSaving(prev => ({ ...prev, [index]: false }));
+        }
+      };
+      reader.onerror = () => {
+         throw new Error("Failed to read image data.");
+      }
+    } catch (error) {
+        setSaveStatus(prev => ({ ...prev, [index]: `Error: ${error instanceof Error ? error.message : 'Save failed.'}` }));
+        setIsSaving(prev => ({ ...prev, [index]: false }));
+    }
+  };
   
   const creditsNeeded = numberOfImages * CREDITS_PER_IMAGE;
-  const hasEnoughCredits = license ? license.credits >= creditsNeeded : false;
+  const hasEnoughCredits = currentCredits >= creditsNeeded;
 
   return (
     <div className="space-y-6">
-      <LicenseModal 
-        show={isLicenseModalOpen}
-        onClose={() => setIsLicenseModalOpen(false)}
-        onSuccess={handleLicenseUpdate}
-      />
-      <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="text-center sm:text-left">
-              <span className="font-semibold text-green-300">Plan:</span>
-              <span className="ml-2 text-gray-300">{license?.plan || 'Loading...'}</span>
-          </div>
-          <div className="text-center sm:text-left">
-              <span className="font-semibold text-green-300">Credits:</span>
-              <span className="ml-2 text-gray-300">{license?.credits ?? '...'}</span>
-          </div>
-          <button 
-            onClick={() => setIsLicenseModalOpen(true)}
-            className="w-full sm:w-auto bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-500 hover:text-black"
-          >
-            Activate License
-          </button>
-      </div>
       <div>
         <label htmlFor="prompt" className="block text-lg font-medium text-green-300 mb-2">
           Describe your vision
@@ -266,9 +317,10 @@ const ImageGenerator: React.FC = () => {
          </div>
       )}
       <div className="text-center">
-        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || isGenerating || !hasEnoughCredits}>
+        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || isGenerating && !cancelGeneration.current || !hasEnoughCredits && !isAuthLoading}>
             {isGenerating ? 'Stop Generating' : `Generate Images (${creditsNeeded} Credits)`}
         </Button>
+        {!hasEnoughCredits && !isAuthLoading && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please purchase or activate a license.</p>}
       </div>
 
 
@@ -286,19 +338,31 @@ const ImageGenerator: React.FC = () => {
               {image.status === 'success' && image.src && (
                 <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
-                    onClick={() => handleRegenerateSingle(index)}
-                    className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
-                    title="Regenerate this image">
-                    <RegenerateIcon className="w-5 h-5" />
+                      onClick={() => handleSaveToCloud(image.src!, index)}
+                      disabled={isSaving[index] || !isUserLoggedIn}
+                      className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed" 
+                      title={isUserLoggedIn ? "Save to Cloud" : "Please log in to save"}>
+                      <CloudUploadIcon className="w-5 h-5" />
                     </button>
                     <button 
-                    onClick={() => handleDownload(image.src!)} 
-                    className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
-                    title="Download as PNG">
-                    <DownloadIcon className="w-5 h-5" />
+                      onClick={() => handleRegenerateSingle(index)}
+                      className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                      title="Regenerate this image">
+                      <RegenerateIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => handleDownload(image.src!)} 
+                      className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                      title="Download as PNG">
+                      <DownloadIcon className="w-5 h-5" />
                     </button>
                 </div>
               )}
+               {saveStatus[index] && (
+                    <div className={`absolute bottom-2 left-2 text-xs px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm ${saveStatus[index]?.startsWith('Error') ? 'text-red-400' : 'text-green-300'}`}>
+                        {isSaving[index] ? 'Saving...' : saveStatus[index]}
+                    </div>
+                )}
             </div>
           ))}
         </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
 import * as ReactRouterDom from 'react-router-dom';
@@ -15,6 +16,12 @@ import CommunityPage from './pages/CommunityPage';
 import FaqPage from './pages/FaqPage';
 import BlogPage from './pages/BlogPage';
 import ArticlePage from './pages/ArticlePage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import ProfilePage from './pages/ProfilePage';
+import ProtectedRoute from './components/ProtectedRoute';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 const App: React.FC = () => {
   return (
@@ -35,8 +42,16 @@ const App: React.FC = () => {
                 <ReactRouterDom.Route path="/community" element={<CommunityPage />} />
                 <ReactRouterDom.Route path="/blog" element={<BlogPage />} />
                 <ReactRouterDom.Route path="/blog/:slug" element={<ArticlePage />} />
-                {/* FIX: Corrected typo from <ReactRouterDom.Toute> to <ReactRouterDom.Route> */}
                 <ReactRouterDom.Route path="/faq" element={<FaqPage />} />
+                <ReactRouterDom.Route path="/login" element={<LoginPage />} />
+                <ReactRouterDom.Route path="/signup" element={<SignupPage />} />
+                <ReactRouterDom.Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <ReactRouterDom.Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+                <ReactRouterDom.Route path="/profile" element={
+                    <ProtectedRoute>
+                        <ProfilePage />
+                    </ProtectedRoute>
+                } />
               </ReactRouterDom.Routes>
             </main>
             <Footer />

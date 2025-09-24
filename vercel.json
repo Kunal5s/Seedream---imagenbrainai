@@ -2,6 +2,25 @@
   "rewrites": [
     { "source": "/api/pollinations", "destination": "/api/pollinations" },
     { "source": "/api/articles", "destination": "/api/articles" },
+    { "source": "/api/user", "destination": "/api/user" },
+    { "source": "/api/activate", "destination": "/api/activate" },
+    { "source": "/api/polar-webhook", "destination": "/api/polar-webhook" },
+    { "source": "/api/deduct-credits", "destination": "/api/deduct-credits" },
+    { "source": "/api/uploadToR2", "destination": "/api/uploadToR2" },
+    { "source": "/api/signup", "destination": "/api/signup" },
+    { "source": "/api/login", "destination": "/api/login" },
+    { "source": "/api/request-password-reset", "destination": "/api/request-password-reset" },
+    { "source": "/api/reset-password", "destination": "/api/reset-password" },
+    { "source": "/api/auth-google", "destination": "/api/auth-google" },
+    { "source": "/api/check-expirations", "destination": "/api/check-expirations" },
+    { "source": "/api/image-history", "destination": "/api/image-history" },
+    { "source": "/api/delete-image", "destination": "/api/delete-image" },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/check-expirations",
+      "schedule": "0 5 * * *"
+    }
   ]
 }

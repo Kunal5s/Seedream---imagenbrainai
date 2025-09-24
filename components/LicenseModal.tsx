@@ -1,53 +1,66 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from './ui/Button';
-import { LicenseStatus, getLicenseStatus, activateLicense } from '../services/licenseService';
+import { useAuth } from '../hooks/useAuth';
 
 interface LicenseModalProps {
   show: boolean;
   onClose: () => void;
-  onSuccess: () => void;
 }
 
-const LicenseModal: React.FC<LicenseModalProps> = ({ show, onClose, onSuccess }) => {
+const LicenseModal: React.FC<LicenseModalProps> = ({ show, onClose }) => {
+  const { user, activateLicense } = useAuth();
   const [email, setEmail] = useState('');
   const [key, setKey] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<LicenseStatus | null>(null);
 
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const keyInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (show) {
-      const status = getLicenseStatus();
-      setCurrentStatus(status);
-      setEmail(status.email || ''); // Pre-fill email if it exists
+      // If user is logged in, pre-fill their email.
+      // Otherwise, clear the form for a new activation.
+      setEmail(user?.email || '');
       setKey('');
       setError(null);
       setSuccessMessage(null);
-      setTimeout(() => emailInputRef.current?.focus(), 100);
+      setIsLoading(false);
+      
+      // Smartly focus the correct input field.
+      setTimeout(() => {
+        if (user) {
+          keyInputRef.current?.focus();
+        } else {
+          emailInputRef.current?.focus();
+        }
+      }, 100);
     }
-  }, [show]);
+  }, [show, user]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
 
     if (!email || !key) {
-      setError('Please fill in both email and activation key.');
+      setError('Please fill in both your email and the activation key.');
       return;
     }
-
+    
+    setIsLoading(true);
     try {
-      const newStatus = activateLicense(email, key);
-      setCurrentStatus(newStatus);
-      setSuccessMessage(`Success! Your ${newStatus.plan} plan is now active with ${newStatus.credits} credits.`);
-      onSuccess(); // Notify parent component to update its state
-      setTimeout(onClose, 2000); // Close modal after 2 seconds on success
+      const newStatus = await activateLicense(email, key);
+      setSuccessMessage(`Success! Your plan is now ${newStatus.plan} with ${newStatus.credits} credits.`);
+      // The useAuth hook will automatically update the user state globally.
+      setTimeout(onClose, 2500); // Close modal after success
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -75,16 +88,15 @@ const LicenseModal: React.FC<LicenseModalProps> = ({ show, onClose, onSuccess })
             className="relative bg-gray-900 border border-green-400/20 rounded-lg shadow-2xl shadow-green-500/10 w-full max-w-md p-8"
           >
             <h2 id="license-modal-title" className="text-2xl font-bold text-center text-green-300 mb-2">
-              Manage Your Plan
+              Activate Your Plan
             </h2>
-            <div className="text-center bg-gray-800/50 p-2 rounded-lg mb-6">
-                <p className="text-sm text-gray-400">Current Plan: <span className="font-bold text-green-300">{currentStatus?.plan}</span></p>
-                <p className="text-sm text-gray-400">Remaining Credits: <span className="font-bold text-green-300">{currentStatus?.credits}</span></p>
-            </div>
+             <p className="text-center text-gray-400 mb-6">
+                Enter the email you used for purchase and your activation key.
+            </p>
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="email-input" className="block text-sm font-medium text-gray-400 mb-1">Your Email</label>
+                <label htmlFor="email-input" className="block text-sm font-medium text-gray-400 mb-1">Your Purchase Email</label>
                 <input
                   ref={emailInputRef}
                   id="email-input"
@@ -94,11 +106,13 @@ const LicenseModal: React.FC<LicenseModalProps> = ({ show, onClose, onSuccess })
                   className="w-full bg-gray-800 border border-gray-700 rounded-md p-3 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
                   placeholder="you@example.com"
                   required
+                  readOnly={!!user} // Make it read-only if logged in
                 />
               </div>
                <div>
                 <label htmlFor="key-input" className="block text-sm font-medium text-gray-400 mb-1">Activation Key</label>
                 <input
+                  ref={keyInputRef}
                   id="key-input"
                   type="text"
                   value={key}
@@ -118,8 +132,8 @@ const LicenseModal: React.FC<LicenseModalProps> = ({ show, onClose, onSuccess })
                   {successMessage}
                 </p>
               )}
-              <Button type="submit" variant="primary" disabled={!!successMessage}>
-                {successMessage ? 'Activated!' : 'Activate Plan'}
+              <Button type="submit" variant="primary" disabled={isLoading || !!successMessage}>
+                {isLoading ? 'Activating...' : (successMessage ? 'Activated!' : 'Activate Plan')}
               </Button>
             </form>
           </motion.div>
