@@ -1,4 +1,6 @@
-import { GoogleGenAI, Modality, Type } from "@google/genai";
+
+
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { sitemap } from "../data/sitemap";
 
 let ai: GoogleGenAI | null = null;
@@ -51,6 +53,71 @@ export const generateImages = async (
     throw new Error('No images were returned from the API.');
   } catch (error) {
     console.error('Error generating images with Gemini:', error);
+    // Re-throw the original error to be displayed in the component UI
+    throw error;
+  }
+};
+
+// FIX: Implement and export the missing `editImage` function to resolve import errors.
+/**
+ * Edits an image using a text prompt with Gemini.
+ * @param base64ImageData The base64 encoded string of the original image.
+ * @param mimeType The IANA standard MIME type of the image.
+ * @param prompt The text prompt describing the desired edits.
+ * @returns A promise that resolves to a base64 data URL of the edited image.
+ */
+export const editImage = async (
+  base64ImageData: string,
+  mimeType: string,
+  prompt: string
+): Promise<string> => {
+  try {
+    const aiClient = getAiClient();
+
+    const imagePart = {
+      inlineData: {
+        data: base64ImageData,
+        mimeType: mimeType,
+      },
+    };
+
+    const textPart = {
+      text: prompt,
+    };
+
+    const response = await aiClient.models.generateContent({
+      model: 'gemini-2.5-flash-image-preview',
+      contents: {
+        parts: [imagePart, textPart],
+      },
+      config: {
+        // Must include both Modality.IMAGE and Modality.TEXT
+        responseModalities: [Modality.IMAGE, Modality.TEXT],
+      },
+    });
+
+    // Find the first image part in the response
+    if (response.candidates && response.candidates.length > 0) {
+        for (const candidate of response.candidates) {
+            for (const part of candidate.content.parts) {
+                if (part.inlineData) {
+                    const base64ImageBytes: string = part.inlineData.data;
+                    const imageMimeType = part.inlineData.mimeType;
+                    return `data:${imageMimeType};base64,${base64ImageBytes}`;
+                }
+            }
+        }
+    }
+    
+    // Check if there was a text response instead of an image, which could indicate an error or safety block.
+    const textResponse = response.text;
+    if (textResponse) {
+        throw new Error(`Image editing failed. The model responded with: "${textResponse.trim()}"`);
+    }
+
+    throw new Error('No edited image was returned from the API.');
+  } catch (error) {
+    console.error('Error editing image with Gemini:', error);
     // Re-throw the original error to be displayed in the component UI
     throw error;
   }
@@ -112,46 +179,6 @@ export const downloadImage = async (imageUrl: string, prompt: string, format: 'p
   } catch (error) {
     console.error('Error downloading image:', error);
     throw new Error('Could not download the image.');
-  }
-};
-
-export const editImage = async (base64ImageData: string, mimeType: string, prompt: string): Promise<string> => {
-  try {
-    const aiClient = getAiClient();
-    const response = await aiClient.models.generateContent({
-      model: 'gemini-2.5-flash-image-preview',
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: base64ImageData,
-              mimeType: mimeType,
-            },
-          },
-          {
-            text: prompt,
-          },
-        ],
-      },
-      config: {
-        responseModalities: [Modality.IMAGE, Modality.TEXT],
-      },
-    });
-
-    const parts = response.candidates?.[0]?.content?.parts || [];
-    for (const part of parts) {
-      if (part.inlineData?.data && part.inlineData?.mimeType) {
-        const base64ImageBytes: string = part.inlineData.data;
-        const imageMimeType = part.inlineData.mimeType;
-        return `data:${imageMimeType};base64,${base64ImageBytes}`;
-      }
-    }
-    
-    throw new Error('No edited image was returned from the API.');
-  } catch (error) {
-    console.error('Error editing image:', error);
-    // Re-throw the original error to be displayed in the component UI
-    throw error;
   }
 };
 

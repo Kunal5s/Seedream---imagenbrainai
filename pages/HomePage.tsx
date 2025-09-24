@@ -230,8 +230,8 @@ const EthicalAISection: React.FC = () => (
 const universeItems = [
   {
     icon: <LayersIcon />,
-    title: "Advanced AI Editing Suite",
-    description: "Go beyond generation. Our integrated editor uses AI to perform complex tasks like inpainting (obj-remove), outpainting to expand your canvas, and smart background removal. It's a full post-production powerhouse."
+    title: "Deep Creative Control",
+    description: "Go beyond basic prompts. Fine-tune every aspect of your creation with dozens of options for artistic style, mood, lighting, and color schemes. Layer different concepts to achieve a unique and polished final image."
   },
   {
     icon: <CodeBracketIcon />,

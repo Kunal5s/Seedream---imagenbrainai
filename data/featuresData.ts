@@ -1,3 +1,4 @@
+
 export const featuresData = [
   {
     title: 'Unleash Creativity with the Premier AI Image Generator',
@@ -64,12 +65,12 @@ export const featuresData = [
     description: `Stop the scroll with stunning, unique visuals. Our **Seedream ImagenBrainAi social media graphics** generator is your secret weapon for creating content that stands out. Produce eye-catching images perfectly sized for Instagram, Facebook, Twitter, and other platforms. Whether you need a vibrant background for a quote, a unique illustration for a blog post announcement, or an engaging image for an ad campaign, our AI can deliver on-brand, high-quality graphics in seconds. Supercharge your content strategy and keep your feed looking fresh and professional.`
   },
   {
-    title: 'Breathe New Life into Your Photos with AI Enhancement',
-    description: `Turn good photos into great ones with our intelligent **Seedream ImagenBrainAi photo enhancement** tools. Upload your existing images and let our AI work its magic. Increase resolution, clarify details, correct colors, and even remove unwanted noise or grain. This feature uses advanced algorithms to analyze your photo and apply subtle, professional-grade improvements without making it look artificial. It’s the perfect way to restore old family photos, improve the quality of your mobile shots, or give your professional photography an extra layer of polish.`
+    title: 'Breathe New Life into Your Photos with AI Enhancement (Coming Soon)',
+    description: `Soon, you'll be able to turn good photos into great ones with our intelligent **Seedream ImagenBrainAi photo enhancement** tools. Upload your existing images and let our AI work its magic by increasing resolution, clarifying details, correcting colors, and even removing unwanted noise or grain. This feature will use advanced algorithms to analyze your photo and apply subtle, professional-grade improvements. It’ll be the perfect way to restore old photos or give your photography an extra layer of polish.`
   },
   {
-    title: 'Isolate Subjects with a Single Click for Perfect Composites',
-    description: `Complex masking and selections are a thing of the past. The **Seedream ImagenBrainAi background removal** tool uses powerful AI to intelligently detect the main subject in your image and flawlessly remove the background, leaving you with a clean, transparent cutout. This feature is incredibly useful for creating product photos for e-commerce, designing professional portraits, or compositing different visual elements together. Get precise, high-quality results in seconds, saving you valuable time and effort that can be better spent on the creative aspects of your project.`
+    title: 'Isolate Subjects with a Single Click for Perfect Composites (Coming Soon)',
+    description: `Complex masking and selections will soon be a thing of the past. The upcoming **Seedream ImagenBrainAi background removal** tool will use powerful AI to intelligently detect the main subject in your image and flawlessly remove the background, leaving you with a clean, transparent cutout. This feature will be incredibly useful for creating product photos for e-commerce, designing professional portraits, or compositing different visual elements together, saving you valuable time.`
   },
   {
     title: 'Automate Your Workflow with Powerful AI Batch Processing',
