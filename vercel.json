@@ -1,4 +1,14 @@
 {
+  "functions": {
+    "api/auth.ts": {},
+    "api/user.ts": {},
+    "api/images.ts": {},
+    "api/polar-webhook.ts": {},
+    "api/check-expirations.ts": {},
+    "api/articles.ts": {},
+    "api/pollinations.ts": {},
+    "api/rss-proxy.ts": {}
+  },
   "rewrites": [
     { "source": "/api/auth", "destination": "/api/auth" },
     { "source": "/api/user", "destination": "/api/user" },

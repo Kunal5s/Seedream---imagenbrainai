@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { generateImages as generatePollinationsImages } from '../services/pollinationsService';
-import { downloadImage } from '../services/geminiService';
+import { generateImages as generatePollinationsImages, downloadImage } from '../services/pollinationsService';
 import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
 import { PLAN_DETAILS } from '../config/plans';
 import Button from './ui/Button';

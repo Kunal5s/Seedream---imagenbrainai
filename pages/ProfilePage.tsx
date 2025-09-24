@@ -4,7 +4,7 @@ import MetaTags from '../components/MetaTags';
 import LicenseModal from '../components/LicenseModal';
 import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
-import { downloadImage } from '../services/geminiService';
+import { downloadImage } from '../services/pollinationsService';
 import DownloadIcon from '../components/ui/DownloadIcon';
 import * as ReactRouterDom from 'react-router-dom';
 

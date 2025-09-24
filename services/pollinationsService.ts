@@ -55,3 +55,61 @@ export const generateImages = async (
     throw new Error('An unknown error occurred while preparing the image URLs.');
   }
 };
+
+export const downloadImage = async (imageUrl: string, prompt: string, format: 'png' | 'jpeg'): Promise<void> => {
+  try {
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    const filename = prompt.substring(0, 40).replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'generated-image';
+
+    if (imageUrl.startsWith('data:')) {
+        // Handle Base64 Data URL
+        if (format === 'jpeg') {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            await new Promise<void>((resolve, reject) => {
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    if (ctx) {
+                      ctx.fillStyle = '#FFFFFF'; // Set a white background for transparency
+                      ctx.fillRect(0, 0, canvas.width, canvas.height);
+                      ctx.drawImage(img, 0, 0);
+                      a.href = canvas.toDataURL('image/jpeg', 0.9); // 90% quality
+                      resolve();
+                    } else {
+                      reject(new Error('Could not get canvas context'));
+                    }
+                }
+                img.onerror = () => reject(new Error('Image failed to load for conversion'));
+                img.src = imageUrl;
+            });
+        } else {
+            a.href = imageUrl;
+        }
+        a.download = `${filename}.${format}`;
+    } else {
+        // Handle External URL
+        const response = await fetch(imageUrl);
+        if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+        const blob = await response.blob();
+        
+        const fileExtension = format; // Use the selected format for the extension
+        a.href = URL.createObjectURL(blob);
+        a.download = `${filename}.${fileExtension}`;
+    }
+    
+    document.body.appendChild(a);
+    a.click();
+    
+    if (!imageUrl.startsWith('data:')) {
+        URL.revokeObjectURL(a.href);
+    }
+    
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('Error downloading image:', error);
+    throw new Error('Could not download the image.');
+  }
+};
