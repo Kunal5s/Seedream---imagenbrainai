@@ -290,7 +290,7 @@ const ImageGenerator: React.FC = () => {
          </div>
       )}
       <div className="text-center">
-        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || (isGenerating && !cancelGeneration.current) || !hasEnoughCredits}>
+        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || !hasEnoughCredits}>
             {isGenerating ? 'Stop Generating' : `Generate Images (${creditsNeeded} Credits)`}
         </Button>
         {!hasEnoughCredits && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please see our pricing plans.</p>}
