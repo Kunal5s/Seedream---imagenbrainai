@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { motion } from 'framer-motion';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
@@ -12,7 +13,6 @@ import Testimonials from '../components/Testimonials';
 import CallToAction from '../components/CallToAction';
 import BlogFeedSection from '../components/BlogFeedSection';
 import HeroBackgroundAnimation from '../components/HeroBackgroundAnimation';
-import AuthSection from '../components/AuthSection';
 
 // --- SVG Icons for components ---
 const CheckCircleIcon = () => (
@@ -453,10 +453,7 @@ const HomePage: React.FC = () => {
       <div className="space-y-24 md:space-y-32">
         <HeroSection />
 
-        <div className="space-y-4">
-            <AuthSection />
-            <GeneratorSuite />
-        </div>
+        <GeneratorSuite />
 
         <BlogFeedSection />
         

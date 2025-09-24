@@ -10,8 +10,15 @@ import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
 import SuccessWrapper from './ui/SuccessWrapper';
 import RegenerateIcon from './ui/RegenerateIcon';
 import DownloadIcon from './ui/DownloadIcon';
-import { useAuth } from '../hooks/useAuth';
-import type { LicenseStatus } from '../services/kvService';
+
+// Define types locally as services are removed
+interface LicenseStatus {
+  name: string | null;
+  plan: 'Free Trial';
+  credits: number;
+  email: string | null;
+  subscriptionStatus: 'free_trial' | null;
+}
 
 const ANONYMOUS_USER_KEY = 'anonymousUserStatus';
 const FREE_TRIAL_CREDITS = 500;
@@ -20,7 +27,13 @@ const getAnonymousStatus = (): LicenseStatus => {
     try {
         const storedStatus = localStorage.getItem(ANONYMOUS_USER_KEY);
         if (storedStatus) {
-            return JSON.parse(storedStatus);
+            const parsed = JSON.parse(storedStatus);
+            // Ensure the structure is correct, especially plan name
+            return {
+                ...parsed,
+                plan: 'Free Trial',
+                subscriptionStatus: 'free_trial'
+            };
         }
     } catch (error) {
         console.error("Could not parse anonymous user status:", error);
@@ -43,12 +56,6 @@ interface ImageState {
     error?: string | null;
 }
 
-const CloudUploadIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l-3.75 3.75M12 9.75l3.75 3.75M3 13.5v-2.25A4.5 4.5 0 017.5 6.75h9a4.5 4.5 0 014.5 4.5v2.25m-16.5 0a4.5 4.5 0 00-1.5 3.75v2.25a1.5 1.5 0 001.5 1.5h16.5a1.5 1.5 0 001.5-1.5v-2.25a4.5 4.5 0 00-1.5-3.75m-16.5 0h16.5" />
-    </svg>
-);
-
 const ImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
@@ -66,17 +73,9 @@ const ImageGenerator: React.FC = () => {
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
   const cancelGeneration = useRef(false);
 
-  const { user, token, deductCredits, refreshUser, isLoading: isAuthLoading } = useAuth();
-  const [anonymousUser, setAnonymousUser] = useState(getAnonymousStatus());
+  const [currentUserStatus, setCurrentUserStatus] = useState(getAnonymousStatus());
 
-  const [isSaving, setIsSaving] = useState<Record<number, boolean>>({});
-  const [saveStatus, setSaveStatus] = useState<Record<number, string | null>>({});
-
-  const currentUserStatus = user || anonymousUser;
-  const isUserLoggedIn = !!user;
-
-  const planKey = Object.keys(PLAN_DETAILS).find(k => PLAN_DETAILS[k].planName === currentUserStatus.plan) || 'FREE_TRIAL';
-  const creditsPerImage = PLAN_DETAILS[planKey].creditsPerImage;
+  const creditsPerImage = PLAN_DETAILS['FREE_TRIAL'].creditsPerImage;
 
   useEffect(() => {
     setImages(
@@ -97,6 +96,14 @@ const ImageGenerator: React.FC = () => {
     if (negativePrompt) finalPrompt += ` --no ${negativePrompt}`;
     return finalPrompt;
   };
+  
+  const deductCredits = (amount: number) => {
+      const creditCost = amount * creditsPerImage;
+      const newCredits = currentUserStatus.credits - creditCost;
+      const newStatus = {...currentUserStatus, credits: newCredits};
+      localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(newStatus));
+      setCurrentUserStatus(newStatus);
+  };
 
   const handleGenerate = async () => {
     if (!prompt) {
@@ -106,7 +113,7 @@ const ImageGenerator: React.FC = () => {
     
     const creditCost = numberOfImages * creditsPerImage;
     if (currentUserStatus.credits < creditCost) {
-      setGlobalError(`Not enough credits. You need ${creditCost} but only have ${currentUserStatus.credits}. Purchase or activate a plan to continue.`);
+      setGlobalError(`Not enough credits. You have ${currentUserStatus.credits}. Visit our Pricing section to see available plans.`);
       return;
     }
 
@@ -115,18 +122,9 @@ const ImageGenerator: React.FC = () => {
     cancelGeneration.current = false;
     
     setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
-    setSaveStatus({});
-    setIsSaving({});
 
     try {
-      if (isUserLoggedIn) {
-        await deductCredits(numberOfImages);
-      } else {
-        const newCredits = anonymousUser.credits - creditCost;
-        const newStatus = {...anonymousUser, credits: newCredits};
-        localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(newStatus));
-        setAnonymousUser(newStatus);
-      }
+      deductCredits(numberOfImages);
 
       const finalPrompt = constructFinalPrompt();
       const imageUrls = await generatePollinationsImages(finalPrompt, aspectRatio.aspectRatio, numberOfImages);
@@ -150,7 +148,6 @@ const ImageGenerator: React.FC = () => {
       const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
       setGlobalError(errorMsg);
       setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
-       if (isUserLoggedIn) refreshUser();
     } finally {
       setIsGenerating(false);
     }
@@ -171,18 +168,9 @@ const ImageGenerator: React.FC = () => {
         return;
     }
     setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'loading', src: null, error: null } : img));
-    setSaveStatus(prev => ({ ...prev, [index]: null }));
     
     try {
-        if (isUserLoggedIn) {
-            await deductCredits(1);
-        } else {
-            const newCredits = anonymousUser.credits - creditsPerImage;
-            const newStatus = {...anonymousUser, credits: newCredits};
-            localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(newStatus));
-            setAnonymousUser(newStatus);
-        }
-
+        deductCredits(1);
         const finalPrompt = constructFinalPrompt();
         const imageUrls = await generatePollinationsImages(finalPrompt, aspectRatio.aspectRatio, 1);
         setImages(prev => prev.map((img, i) => 
@@ -191,56 +179,11 @@ const ImageGenerator: React.FC = () => {
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
-        if (isUserLoggedIn) refreshUser();
     }
   };
 
   const handleDownload = (imageUrl: string) => {
     downloadImage(imageUrl, prompt, 'png');
-  };
-
-  const handleSaveToCloud = async (imageUrl: string, index: number) => {
-    if (!isUserLoggedIn || !token) {
-        setSaveStatus(prev => ({...prev, [index]: 'Error: Please log in to save images.'}));
-        return;
-    }
-    setIsSaving(prev => ({ ...prev, [index]: true }));
-    setSaveStatus(prev => ({ ...prev, [index]: null }));
-    try {
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error('Failed to fetch image for saving.');
-
-      const blob = await response.blob();
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64data = reader.result;
-        try {
-            const saveResponse = await fetch('/api/images?action=upload', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ imageData: base64data, prompt: constructFinalPrompt() }),
-            });
-
-            if (!saveResponse.ok) {
-                const errorResult = await saveResponse.json();
-                throw new Error(errorResult.message || 'Failed to save the image to the cloud.');
-            }
-            setSaveStatus(prev => ({ ...prev, [index]: `Saved to profile!` }));
-        } catch (apiError) {
-             setSaveStatus(prev => ({ ...prev, [index]: `Error: ${apiError instanceof Error ? apiError.message : 'Save failed.'}` }));
-        } finally {
-            setIsSaving(prev => ({ ...prev, [index]: false }));
-        }
-      };
-      reader.onerror = () => { throw new Error("Failed to read image data.") }
-    } catch (error) {
-        setSaveStatus(prev => ({ ...prev, [index]: `Error: ${error instanceof Error ? error.message : 'Save failed.'}` }));
-        setIsSaving(prev => ({ ...prev, [index]: false }));
-    }
   };
   
   const creditsNeeded = numberOfImages * creditsPerImage;
@@ -248,6 +191,17 @@ const ImageGenerator: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-center sm:text-left">
+                <p className="text-xs text-gray-400">Welcome, Guest!</p>
+                <span className="font-semibold text-green-300">Plan:</span>
+                <span className="ml-2 text-gray-300">{currentUserStatus.plan}</span>
+            </div>
+            <div className="text-center sm:text-left">
+                <span className="font-semibold text-green-300">Credits:</span>
+                <span className="ml-2 text-gray-300">{currentUserStatus.credits}</span>
+            </div>
+        </div>
       <div>
         <label htmlFor="prompt" className="block text-lg font-medium text-green-300 mb-2">
           Describe your vision
@@ -336,10 +290,10 @@ const ImageGenerator: React.FC = () => {
          </div>
       )}
       <div className="text-center">
-        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || isGenerating && !cancelGeneration.current || !hasEnoughCredits && !isAuthLoading}>
+        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || (isGenerating && !cancelGeneration.current) || !hasEnoughCredits}>
             {isGenerating ? 'Stop Generating' : `Generate Images (${creditsNeeded} Credits)`}
         </Button>
-        {!hasEnoughCredits && !isAuthLoading && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please purchase or activate a license.</p>}
+        {!hasEnoughCredits && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please see our pricing plans.</p>}
       </div>
 
 
@@ -357,13 +311,6 @@ const ImageGenerator: React.FC = () => {
               {image.status === 'success' && image.src && (
                 <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
-                      onClick={() => handleSaveToCloud(image.src!, index)}
-                      disabled={isSaving[index] || !isUserLoggedIn}
-                      className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed" 
-                      title={isUserLoggedIn ? "Save to Cloud" : "Please log in to save"}>
-                      <CloudUploadIcon className="w-5 h-5" />
-                    </button>
-                    <button 
                       onClick={() => handleRegenerateSingle(index)}
                       className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
                       title="Regenerate this image">
@@ -377,11 +324,6 @@ const ImageGenerator: React.FC = () => {
                     </button>
                 </div>
               )}
-               {saveStatus[index] && (
-                    <div className={`absolute bottom-2 left-2 text-xs px-2 py-1 rounded-md bg-black/60 backdrop-blur-sm ${saveStatus[index]?.startsWith('Error') ? 'text-red-400' : 'text-green-300'}`}>
-                        {isSaving[index] ? 'Saving...' : saveStatus[index]}
-                    </div>
-                )}
             </div>
           ))}
         </div>

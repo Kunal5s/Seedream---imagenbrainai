@@ -3,11 +3,8 @@ import React from 'react';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
 import * as ReactRouterDom from 'react-router-dom';
 import FooterBlogFeed from './FooterBlogFeed';
-import { useAuth } from '../hooks/useAuth';
 
 const Footer: React.FC = () => {
-  const { user } = useAuth();
-
   const quickLinks = [
     { name: 'About Us', path: '/about' },
     { name: 'Contact Us', path: '/contact' },
@@ -66,13 +63,6 @@ const Footer: React.FC = () => {
                   </ReactRouterDom.Link>
                 </li>
               ))}
-               {user && (
-                  <li>
-                    <ReactRouterDom.Link to="/profile" className="text-gray-400 hover:text-green-300 transition-colors">
-                      Profile
-                    </ReactRouterDom.Link>
-                  </li>
-                )}
              </ul>
           </div>
           
