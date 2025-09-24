@@ -1,9 +1,6 @@
-
-import { kv } from '@vercel/kv';
-import type { VercelRequest, VerrcelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { LicenseStatus } from '../services/licenseService';
 import { getXataClient } from '../services/xataService';
-import { verifyToken } from '../services/authService';
 
 const xata = getXataClient();
 
@@ -36,9 +33,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        // --- Prevent duplicate key activation ---
+        // --- Prevent duplicate key activation using Xata ---
         const keyUsedMarker = `key-used:${upperCaseKey}`;
-        const alreadyUsed = await kv.get(keyUsedMarker);
+        const alreadyUsed = await xata.db.used_activation_keys.read(keyUsedMarker);
         if (alreadyUsed) {
             return res.status(409).json({ message: 'This activation key has already been used.' });
         }
@@ -55,7 +52,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const planDetails = PLAN_CREDITS[newPlan];
         const newCredits = (existingUser.credits || 0) + planDetails.credits;
         
-        // FIX: Set plan to active for 30 days upon activation.
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 30);
 
@@ -66,10 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             subscriptionStatus: 'active',
             planExpiryDate: expiryDate,
         });
-
-        await kv.set(keyUsedMarker, true, { ex: 86400 * 365 }); // Mark key as used for 1 year
         
-        // FIX: Add missing 'name' property and others to match LicenseStatus type.
+        // Mark key as used in Xata table. The ID is the key itself.
+        await xata.db.used_activation_keys.create({ id: keyUsedMarker });
+        
         const responseData: LicenseStatus = {
             name: updatedRecord.name,
             email: updatedRecord.email!,

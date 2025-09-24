@@ -43,7 +43,7 @@ export const generateImages = async (
 
     if (response.generatedImages && response.generatedImages.length > 0) {
       return response.generatedImages.map(img => {
-        const base64ImageBytes: string = img.image.imageBytes;
+        const base64ImageBytes: string = img.image?.imageBytes ?? '';
         return `data:image/png;base64,${base64ImageBytes}`;
       });
     }
@@ -164,7 +164,7 @@ export const summarizeArticle = async (articleText: string): Promise<string> => 
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text;
+    return response.text ?? '';
   } catch (error) {
     console.error('Error summarizing article with Gemini:', error);
     if (error instanceof Error && error.message.includes('API_KEY')) {
@@ -198,7 +198,7 @@ export const generateFullArticle = async (topic: string): Promise<string> => {
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text;
+    return response.text ?? '';
   } catch (error) {
     console.error('Error generating full article:', error);
     throw new Error('Failed to generate the full article.');
@@ -254,7 +254,7 @@ export const generateArticleMetadata = async (content: string, topic: string): P
       }
     });
 
-    const jsonStr = response.text.trim();
+    const jsonStr = (response.text ?? '').trim();
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error('Error generating article metadata:', error);
@@ -282,7 +282,7 @@ export const generateArticleSection = async (topic: string, keywords: string, se
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text;
+    return response.text ?? '';
   } catch (error) {
     console.error('Error generating article section:', error);
     throw new Error('Failed to generate the article section.');
@@ -321,7 +321,7 @@ export const addLinksToArticle = async (content: string): Promise<string> => {
       model: 'gemini-2.5-flash',
       contents: prompt,
     });
-    return response.text;
+    return response.text ?? '';
   } catch (error) {
     console.error('Error adding links to article:', error);
     throw new Error('Failed to add internal links to the article.');

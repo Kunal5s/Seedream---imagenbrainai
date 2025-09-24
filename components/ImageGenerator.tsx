@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { generateImages as generatePollinationsImages } from '../services/pollinationsService';
 import { downloadImage } from '../services/geminiService';
@@ -194,7 +193,7 @@ const ImageGenerator: React.FC = () => {
       reader.onloadend = async () => {
         const base64data = reader.result;
         try {
-            const saveResponse = await fetch('/api/uploadToR2', {
+            const saveResponse = await fetch('/api/images?action=upload', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',

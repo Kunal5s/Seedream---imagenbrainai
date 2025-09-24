@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import MetaTags from '../components/MetaTags';
@@ -36,7 +35,7 @@ const ProfilePage: React.FC = () => {
         setIsLoadingHistory(true);
         setHistoryError(null);
         try {
-            const response = await fetch('/api/image-history', {
+            const response = await fetch('/api/images', {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             if (!response.ok) throw new Error('Failed to fetch image history.');
@@ -59,8 +58,8 @@ const ProfilePage: React.FC = () => {
         }
 
         try {
-            const response = await fetch('/api/delete-image', {
-                method: 'POST', // Using POST as some environments might not support DELETE with body
+            const response = await fetch('/api/images?action=delete', {
+                method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}` 

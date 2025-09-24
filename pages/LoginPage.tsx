@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -26,7 +25,8 @@ const LoginPage: React.FC = () => {
     const from = location.state?.from?.pathname || "/";
 
     const handleGoogleSignIn = () => {
-        // This is a placeholder. A full implementation would use a library like @react-oauth/google.
+        // This is a placeholder. A full implementation would use a library like @react-oauth/google
+        // which would call `fetch('/api/auth?action=google', ...)` on success.
         alert("To enable Google Sign-In, please add the '@react-oauth/google' library and your Google Client ID to the Vercel environment variables as 'GOOGLE_CLIENT_ID'.");
     };
 

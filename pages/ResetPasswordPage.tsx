@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 import Button from '../components/ui/Button';
@@ -26,7 +25,7 @@ const ResetPasswordPage: React.FC = () => {
         setMessage(null);
         setIsLoading(true);
         try {
-            const response = await fetch('/api/reset-password', {
+            const response = await fetch('/api/password?action=reset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token, password }),
