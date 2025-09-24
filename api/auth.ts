@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
 import type { LicenseStatus } from '../services/licenseService';
-import { kvService, UserData, kv, resetTokenKey } from '../services/kvService';
+import { kvService, kv, resetTokenKey } from '../services/kvService';
 
 const handleSignup = async (req: VercelRequest, res: VercelResponse) => {
     const { email, password, name } = req.body;
