@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 import MetaTags from '../components/MetaTags';
 import { BlogPost } from '../data/blogData';
-import { getArticleBySlug } from '../services/articleService';
+import { getArticleBySlug } from '../data/blogData';
 import Spinner from '../components/ui/Spinner';
 import AuthorBio from '../components/AuthorBio';
 

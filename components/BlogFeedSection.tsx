@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 import { BlogPost } from '../data/blogData';
-import { getArticles } from '../services/articleService';
+import { getArticles } from '../data/blogData';
 import Spinner from './ui/Spinner';
 import ArticleCard from './ArticleCard';
 

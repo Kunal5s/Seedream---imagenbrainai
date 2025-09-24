@@ -4,7 +4,7 @@ import * as ReactRouterDom from 'react-router-dom';
 import MetaTags from '../components/MetaTags';
 import { motion, Variants } from 'framer-motion';
 import { BlogPost } from '../data/blogData';
-import { getArticles } from '../services/articleService';
+import { getArticles } from '../data/blogData';
 import Spinner from '../components/ui/Spinner';
 import ArticleCard from '../components/ArticleCard';
 import RefreshIcon from '../components/ui/RefreshIcon';

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // FIX: Use namespace import for react-router-dom to fix module resolution issues.
 import * as ReactRouterDom from 'react-router-dom';
 import { BlogPost } from '../data/blogData';
-import { getArticles } from '../services/articleService';
+import { getArticles } from '../data/blogData';
 
 const FooterBlogFeed: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
