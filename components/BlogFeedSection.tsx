@@ -76,7 +76,7 @@ const BlogFeedSection: React.FC = () => {
     <section>
       <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
-          From the Seedream AI Blog
+          Seedream Imagenbrainai Feed
         </span>
       </h2>
       {renderContent()}

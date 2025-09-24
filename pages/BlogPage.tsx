@@ -99,7 +99,7 @@ const BlogPage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="Blog | Seedream ImagenBrainAi 4.0"
+        title="Seedream Imagenbrainai Feed | Seedream ImagenBrainAi 4.0"
         description="Explore articles, insights, and guides on leveraging the power of AI art with Seedream ImagenBrainAi 4.0. Stay updated on new features, tips, and creative inspiration."
         canonicalPath="/blog"
       />
@@ -108,7 +108,7 @@ const BlogPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row justify-center items-center gap-x-4 gap-y-4 mb-4">
                 <h1 className="text-4xl md:text-6xl font-extrabold">
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
-                    The Seedream AI Blog
+                    Seedream Imagenbrainai Feed
                     </span>
                 </h1>
                 <button

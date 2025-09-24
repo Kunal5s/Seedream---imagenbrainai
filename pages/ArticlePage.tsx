@@ -80,7 +80,7 @@ const ArticlePage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title={`${article.title} | Seedream AI Blog`}
+        title={`${article.title} | Seedream Imagenbrainai Feed`}
         description={article.excerpt}
         canonicalPath={`/blog/${article.slug}`}
       />
