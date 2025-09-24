@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { LicenseStatus, clearAnonymousStatus } from '../services/licenseService';
+import type { LicenseStatus } from '../services/kvService';
 
 interface AuthContextType {
   user: LicenseStatus | null;
@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(data.user);
     setToken(data.token);
     localStorage.setItem('authToken', data.token);
-    clearAnonymousStatus();
+    localStorage.removeItem('anonymousUserStatus');
   };
 
   const signup = async (name: string, email: string, password: string) => {

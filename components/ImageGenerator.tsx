@@ -10,8 +10,31 @@ import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
 import SuccessWrapper from './ui/SuccessWrapper';
 import RegenerateIcon from './ui/RegenerateIcon';
 import DownloadIcon from './ui/DownloadIcon';
-import { getAnonymousStatus } from '../services/licenseService';
 import { useAuth } from '../hooks/useAuth';
+import type { LicenseStatus } from '../services/kvService';
+
+const ANONYMOUS_USER_KEY = 'anonymousUserStatus';
+const FREE_TRIAL_CREDITS = 500;
+
+const getAnonymousStatus = (): LicenseStatus => {
+    try {
+        const storedStatus = localStorage.getItem(ANONYMOUS_USER_KEY);
+        if (storedStatus) {
+            return JSON.parse(storedStatus);
+        }
+    } catch (error) {
+        console.error("Could not parse anonymous user status:", error);
+    }
+    const defaultStatus: LicenseStatus = {
+        name: 'Guest',
+        plan: 'Free Trial',
+        credits: FREE_TRIAL_CREDITS,
+        email: null,
+        subscriptionStatus: 'free_trial',
+    };
+    localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(defaultStatus));
+    return defaultStatus;
+};
 
 interface ImageState {
     key: number;
@@ -100,7 +123,9 @@ const ImageGenerator: React.FC = () => {
         await deductCredits(numberOfImages);
       } else {
         const newCredits = anonymousUser.credits - creditCost;
-        setAnonymousUser({...anonymousUser, credits: newCredits});
+        const newStatus = {...anonymousUser, credits: newCredits};
+        localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(newStatus));
+        setAnonymousUser(newStatus);
       }
 
       const finalPrompt = constructFinalPrompt();
@@ -153,7 +178,9 @@ const ImageGenerator: React.FC = () => {
             await deductCredits(1);
         } else {
             const newCredits = anonymousUser.credits - creditsPerImage;
-            setAnonymousUser({...anonymousUser, credits: newCredits});
+            const newStatus = {...anonymousUser, credits: newCredits};
+            localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(newStatus));
+            setAnonymousUser(newStatus);
         }
 
         const finalPrompt = constructFinalPrompt();

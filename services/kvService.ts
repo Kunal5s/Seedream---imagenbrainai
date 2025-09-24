@@ -1,10 +1,19 @@
 import { createClient } from '@vercel/kv';
-import type { LicenseStatus } from './licenseService';
 
 export const kv = createClient({
   url: process.env.KV_REST_API_URL!,
   token: process.env.KV_REST_API_TOKEN!,
 });
+
+export interface LicenseStatus {
+  name: string | null;
+  plan: 'Free Trial' | 'Booster' | 'Premium' | 'Professional' | 'Loading...';
+  credits: number;
+  email: string | null;
+  key?: string | null;
+  planExpiryDate?: string | null;
+  subscriptionStatus?: 'active' | 'expired' | 'free_trial' | null;
+}
 
 export interface UserData extends LicenseStatus {
     id: string;

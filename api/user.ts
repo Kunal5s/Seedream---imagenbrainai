@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type { LicenseStatus } from '../services/licenseService';
-import { kvService, UserData } from '../services/kvService';
+import { kvService, UserData, LicenseStatus } from '../services/kvService';
 import { verifyToken } from '../services/authService';
 import { PLAN_DETAILS, getKeyPrefixToPlan } from '../config/plans';
 
