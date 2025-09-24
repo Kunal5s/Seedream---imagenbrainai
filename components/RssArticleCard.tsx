@@ -1,10 +1,11 @@
 import React from 'react';
 import * as ReactRouterDom from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Article } from '../data/rssData';
+// FIX: The `Article` type from `rssData` is obsolete. Use `BlogPost` from `blogData` to align with the current data model.
+import { BlogPost } from '../data/blogData';
 
 interface RssArticleCardProps {
-  post: Article;
+  post: BlogPost;
 }
 
 const cardVariants = {
@@ -28,7 +29,7 @@ const RssArticleCard: React.FC<RssArticleCardProps> = ({ post }) => {
       >
         <div className="relative aspect-video bg-gray-800">
           <img
-            src={post.thumbnail || 'https://images.pexels.com/photos/3408744/pexels-photo-3408744.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'}
+            src={post.featuredImage || 'https://images.pexels.com/photos/3408744/pexels-photo-3408744.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'}
             alt={post.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             loading="lazy"
@@ -36,7 +37,7 @@ const RssArticleCard: React.FC<RssArticleCardProps> = ({ post }) => {
         </div>
         <div className="p-6 flex flex-col flex-grow">
           <h2 className="text-xl font-bold text-green-300 mb-3 group-hover:text-green-200 transition-colors line-clamp-2">{post.title}</h2>
-          <p className="text-gray-400 text-sm leading-relaxed flex-grow line-clamp-3">{post.description}</p>
+          <p className="text-gray-400 text-sm leading-relaxed flex-grow line-clamp-3">{post.excerpt}</p>
           <div className="mt-4 text-green-400 font-semibold text-sm self-start">
             Read More &rarr;
           </div>

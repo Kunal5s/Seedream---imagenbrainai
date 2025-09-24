@@ -1,5 +1,24 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { RssChannel, Article } from '../data/rssData';
+
+// FIX: Define types locally as data/rssData.ts is obsolete.
+export interface RssChannel {
+    title: string;
+    description: string;
+    link: string;
+}
+
+export interface Article {
+    guid: string;
+    id: string;
+    slug: string;
+    link: string;
+    title: string;
+    pubDate: string;
+    description: string;
+    content: string;
+    thumbnail: string | null;
+    isNew: boolean;
+}
 
 // --- Helper Functions ---
 

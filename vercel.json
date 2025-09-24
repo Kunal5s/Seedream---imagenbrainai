@@ -1,1 +1,8 @@
-full contents of vercel.json
+{
+  "crons": [
+    {
+      "path": "/api/check-expirations",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
