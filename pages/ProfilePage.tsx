@@ -6,14 +6,14 @@ import Button from '../components/ui/Button';
 import Spinner from '../components/ui/Spinner';
 import { downloadImage } from '../services/geminiService';
 import DownloadIcon from '../components/ui/DownloadIcon';
+import * as ReactRouterDom from 'react-router-dom';
+
 
 interface GeneratedImage {
   id: string;
   imageUrl: string;
   prompt: string;
-  xata: {
-    createdAt: string;
-  };
+  createdAt: string;
 }
 
 const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -25,6 +25,7 @@ const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 const ProfilePage: React.FC = () => {
     const { user, token, logout } = useAuth();
+    const navigate = ReactRouterDom.useNavigate();
     const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
     const [imageHistory, setImageHistory] = useState<GeneratedImage[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -79,12 +80,8 @@ const ProfilePage: React.FC = () => {
     };
     
      const handleRenewPlan = () => {
-        const pricingSection = document.querySelector('#pricing-section'); // Assuming PricingSection has this ID
-        if (pricingSection) {
-            pricingSection.scrollIntoView({ behavior: 'smooth' });
-        } else {
-             window.location.href = '/#/'; // Fallback to homepage if not found
-        }
+        navigate('/');
+        // After navigation, HomePage can be modified to scroll to a #pricing section if needed
     };
 
     if (!user) {

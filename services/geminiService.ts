@@ -138,13 +138,12 @@ export const editImage = async (base64ImageData: string, mimeType: string, promp
       },
     });
 
-    if (response.candidates && response.candidates.length > 0) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          const base64ImageBytes: string = part.inlineData.data;
-          const imageMimeType = part.inlineData.mimeType;
-          return `data:${imageMimeType};base64,${base64ImageBytes}`;
-        }
+    const parts = response.candidates?.[0]?.content?.parts || [];
+    for (const part of parts) {
+      if (part.inlineData) {
+        const base64ImageBytes: string = part.inlineData.data;
+        const imageMimeType = part.inlineData.mimeType;
+        return `data:${imageMimeType};base64,${base64ImageBytes}`;
       }
     }
     

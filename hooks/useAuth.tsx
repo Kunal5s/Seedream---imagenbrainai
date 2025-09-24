@@ -9,7 +9,7 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   activateLicense: (email: string, key: string) => Promise<LicenseStatus>;
-  deductCredits: (amount: number) => Promise<void>;
+  deductCredits: (amountOfImages: number) => Promise<void>;
   refreshUser: () => void;
 }
 
@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserProfile = useCallback(async (jwt: string) => {
     try {
-      const response = await fetch('/api/user', {
+      const response = await fetch('/api/user?action=get-profile', {
         headers: { 'Authorization': `Bearer ${jwt}` },
       });
       if (response.ok) {
@@ -82,9 +82,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   const activateLicense = async (email: string, key: string): Promise<LicenseStatus> => {
-      const response = await fetch('/api/activate', {
+      const response = await fetch('/api/user?action=activate-key', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}`}) // Add auth token if available
+        },
         body: JSON.stringify({ email, key }),
       });
       const data = await response.json();
@@ -97,15 +100,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return data;
   };
 
-  const deductCredits = async (amount: number) => {
+  const deductCredits = async (amountOfImages: number) => {
       if (!token) throw new Error("Authentication required.");
-      const response = await fetch('/api/deduct-credits', {
+      const response = await fetch('/api/user?action=deduct-credits', {
           method: 'POST',
           headers: { 
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ amount }),
+          body: JSON.stringify({ amountOfImages }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Failed to deduct credits');

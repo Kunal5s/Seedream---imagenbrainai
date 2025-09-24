@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import * as ReactRouterDom from 'react-router-dom';
@@ -38,7 +37,7 @@ const AuthSection: React.FC = () => {
                 onClick={() => setIsLicenseModalOpen(true)}
                 className="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-500 hover:text-black"
               >
-                Add Credits
+                Activate License
               </button>
               <button 
                 onClick={logout}

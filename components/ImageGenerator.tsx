@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { generateImages as generatePollinationsImages } from '../services/pollinationsService';
 import { downloadImage } from '../services/geminiService';
-import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS, CREDITS_PER_IMAGE } from '../constants';
+import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
+import { PLAN_DETAILS } from '../config/plans';
 import Button from './ui/Button';
 import Select from './ui/Select';
 import MoonLoader from './ui/MoonLoader';
@@ -10,10 +11,9 @@ import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
 import SuccessWrapper from './ui/SuccessWrapper';
 import RegenerateIcon from './ui/RegenerateIcon';
 import DownloadIcon from './ui/DownloadIcon';
-import { getAnonymousStatus, deductAnonymousCredits } from '../services/licenseService';
+import { getAnonymousStatus } from '../services/licenseService';
 import { useAuth } from '../hooks/useAuth';
 
-// FIX: Define the missing `ImageState` interface to resolve the TypeScript error.
 interface ImageState {
     key: number;
     src: string | null;
@@ -45,13 +45,16 @@ const ImageGenerator: React.FC = () => {
   const cancelGeneration = useRef(false);
 
   const { user, token, deductCredits, refreshUser, isLoading: isAuthLoading } = useAuth();
-  const [anonymousCredits, setAnonymousCredits] = useState(getAnonymousStatus().credits);
+  const [anonymousUser, setAnonymousUser] = useState(getAnonymousStatus());
 
   const [isSaving, setIsSaving] = useState<Record<number, boolean>>({});
   const [saveStatus, setSaveStatus] = useState<Record<number, string | null>>({});
 
-  const currentCredits = user ? user.credits : anonymousCredits;
+  const currentUserStatus = user || anonymousUser;
   const isUserLoggedIn = !!user;
+
+  const planKey = Object.keys(PLAN_DETAILS).find(k => PLAN_DETAILS[k].planName === currentUserStatus.plan) || 'FREE_TRIAL';
+  const creditsPerImage = PLAN_DETAILS[planKey].creditsPerImage;
 
   useEffect(() => {
     setImages(
@@ -79,9 +82,9 @@ const ImageGenerator: React.FC = () => {
       return;
     }
     
-    const creditCost = numberOfImages * CREDITS_PER_IMAGE;
-    if (currentCredits < creditCost) {
-      setGlobalError(`Not enough credits. You need ${creditCost} but only have ${currentCredits}. Purchase or activate a plan to continue.`);
+    const creditCost = numberOfImages * creditsPerImage;
+    if (currentUserStatus.credits < creditCost) {
+      setGlobalError(`Not enough credits. You need ${creditCost} but only have ${currentUserStatus.credits}. Purchase or activate a plan to continue.`);
       return;
     }
 
@@ -95,10 +98,10 @@ const ImageGenerator: React.FC = () => {
 
     try {
       if (isUserLoggedIn) {
-        await deductCredits(creditCost);
+        await deductCredits(numberOfImages);
       } else {
-        const newStatus = deductAnonymousCredits(creditCost);
-        setAnonymousCredits(newStatus.credits);
+        const newCredits = anonymousUser.credits - creditCost;
+        setAnonymousUser({...anonymousUser, credits: newCredits});
       }
 
       const finalPrompt = constructFinalPrompt();
@@ -123,10 +126,7 @@ const ImageGenerator: React.FC = () => {
       const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
       setGlobalError(errorMsg);
       setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
-      // On failure, refresh user status to 'refund' credits if logged in.
-       if (isUserLoggedIn) {
-           refreshUser();
-       }
+       if (isUserLoggedIn) refreshUser();
     } finally {
       setIsGenerating(false);
     }
@@ -138,9 +138,8 @@ const ImageGenerator: React.FC = () => {
   };
   
   const handleRegenerateSingle = async (index: number) => {
-    const creditCost = CREDITS_PER_IMAGE;
-    if (currentCredits < creditCost) {
-      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits. You have ${currentCredits}.` } : img));
+    if (currentUserStatus.credits < creditsPerImage) {
+      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits. You have ${currentUserStatus.credits}.` } : img));
       return;
     }
     if (!prompt) {
@@ -152,10 +151,10 @@ const ImageGenerator: React.FC = () => {
     
     try {
         if (isUserLoggedIn) {
-            await deductCredits(creditCost);
+            await deductCredits(1);
         } else {
-            const newStatus = deductAnonymousCredits(creditCost);
-            setAnonymousCredits(newStatus.credits);
+            const newCredits = anonymousUser.credits - creditsPerImage;
+            setAnonymousUser({...anonymousUser, credits: newCredits});
         }
 
         const finalPrompt = constructFinalPrompt();
@@ -166,9 +165,7 @@ const ImageGenerator: React.FC = () => {
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
-        if (isUserLoggedIn) {
-           refreshUser();
-        }
+        if (isUserLoggedIn) refreshUser();
     }
   };
 
@@ -206,7 +203,6 @@ const ImageGenerator: React.FC = () => {
                 const errorResult = await saveResponse.json();
                 throw new Error(errorResult.message || 'Failed to save the image to the cloud.');
             }
-            const result = await saveResponse.json();
             setSaveStatus(prev => ({ ...prev, [index]: `Saved to profile!` }));
         } catch (apiError) {
              setSaveStatus(prev => ({ ...prev, [index]: `Error: ${apiError instanceof Error ? apiError.message : 'Save failed.'}` }));
@@ -214,17 +210,15 @@ const ImageGenerator: React.FC = () => {
             setIsSaving(prev => ({ ...prev, [index]: false }));
         }
       };
-      reader.onerror = () => {
-         throw new Error("Failed to read image data.");
-      }
+      reader.onerror = () => { throw new Error("Failed to read image data.") }
     } catch (error) {
         setSaveStatus(prev => ({ ...prev, [index]: `Error: ${error instanceof Error ? error.message : 'Save failed.'}` }));
         setIsSaving(prev => ({ ...prev, [index]: false }));
     }
   };
   
-  const creditsNeeded = numberOfImages * CREDITS_PER_IMAGE;
-  const hasEnoughCredits = currentCredits >= creditsNeeded;
+  const creditsNeeded = numberOfImages * creditsPerImage;
+  const hasEnoughCredits = currentUserStatus.credits >= creditsNeeded;
 
   return (
     <div className="space-y-6">

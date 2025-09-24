@@ -1,14 +1,13 @@
 {
   "rewrites": [
     { "source": "/api/auth", "destination": "/api/auth" },
-    { "source": "/api/password", "destination": "/api/password" },
-    { "source": "/api/images", "destination": "/api/images" },
     { "source": "/api/user", "destination": "/api/user" },
-    { "source": "/api/activate", "destination": "/api/activate" },
+    { "source": "/api/images", "destination": "/api/images" },
     { "source": "/api/polar-webhook", "destination": "/api/polar-webhook" },
-    { "source": "/api/deduct-credits", "destination": "/api/deduct-credits" },
     { "source": "/api/check-expirations", "destination": "/api/check-expirations" },
     { "source": "/api/articles", "destination": "/api/articles" },
+    { "source": "/api/pollinations", "destination": "/api/pollinations" },
+    { "source": "/api/rss-proxy", "destination": "/api/rss-proxy" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [

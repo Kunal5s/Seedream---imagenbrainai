@@ -1,7 +1,4 @@
-// FIX: Replaced the manual XataClient implementation with the recommended `buildClient`
-// factory. The previous approach of extending BaseClient did not create the `.db`
-// accessor, causing widespread type errors. This new implementation correctly
-// generates a typed client, resolving the "Property 'db' does not exist" errors.
+// Generated with CLI
 import { buildClient } from "@xata.io/client";
 
 const tables = [
@@ -30,28 +27,29 @@ const tables = [
   },
   {
     name: "used_activation_keys",
-    columns: [
-      // The 'id' column is implicitly created and will store the key string.
-      // No other columns are needed for this lookup table.
-    ],
+    columns: [],
+  },
+  {
+    name: "processed_orders",
+    columns: [],
   }
 ];
 
-// This creates a properly typed client class based on the schema defined above.
-// The buildClient function returns a class that we can instantiate.
 const XataClient = buildClient({ tables });
 
-let instance: XataClient | undefined = undefined;
+// This defines the type for an instance of our generated client
+type XataClientInstance = InstanceType<typeof XataClient>;
 
-// We use a singleton pattern to ensure we only have one Xata client instance.
-export const getXataClient = () => {
-    if (instance) return instance;
+let instance: XataClientInstance | undefined = undefined;
 
-    instance = new XataClient({
-        databaseURL: process.env.XATA_DATABASE_URL,
-        apiKey: process.env.XATA_API_KEY,
-        branch: process.env.XATA_BRANCH || "main",
-        fetch,
-    });
-    return instance;
+export const getXataClient = (): XataClientInstance => {
+  if (instance) return instance;
+
+  instance = new XataClient({
+    databaseURL: process.env.XATA_DATABASE_URL,
+    apiKey: process.env.XATA_API_KEY,
+    branch: process.env.XATA_BRANCH || "main",
+    fetch,
+  });
+  return instance;
 };

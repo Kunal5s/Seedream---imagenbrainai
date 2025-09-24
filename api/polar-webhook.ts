@@ -1,23 +1,10 @@
-import { kv } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type { LicenseStatus } from '../services/licenseService';
-import { getXataClient } from '../services/xataService';
+import { kvService } from '../services/kvService';
 import crypto from 'crypto';
 import { Buffer } from 'buffer';
+import { PLAN_DETAILS } from '../config/plans';
 
-const xata = getXataClient();
-
-export const config = {
-    api: {
-        bodyParser: false,
-    },
-};
-
-const PRODUCT_ID_TO_PLAN: Record<string, { plan: LicenseStatus['plan'], credits: number }> = {
-    'polar_cl_dxRr7iGKWfMzpHYZlFGd5tY18ICJM30sDgGf80Y0dCj': { plan: 'Booster', credits: 5000 },
-    'polar_cl_lTBWXKtStKOn44M16Qpb2LdlE1YC7OaxWNDDo4RTpge': { plan: 'Premium', credits: 15000 },
-    'polar_cl_SrTKX1rcDoCW5jAoj4lZsmqnwNoocvi8oGZLu4WmoMa': { plan: 'Professional', credits: 30000 },
-};
+export const config = { api: { bodyParser: false } };
 
 async function getRawBody(req: VercelRequest): Promise<Buffer> {
     const chunks: Buffer[] = [];
@@ -28,85 +15,65 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
-    }
+    if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
 
     try {
         const rawBody = await getRawBody(req);
         const signature = req.headers['polar-signature'] as string;
         const secret = process.env.POLAR_WEBHOOK_SECRET;
 
-        if (!secret) {
-            console.error('POLAR_WEBHOOK_SECRET is not set in environment variables.');
-            return res.status(500).json({ error: 'Webhook secret not configured.' });
-        }
-        if (!signature) {
-            return res.status(401).json({ error: 'Signature missing from request.' });
-        }
+        if (!secret || !signature) return res.status(401).json({ error: 'Signature or secret missing.' });
 
         const hmac = crypto.createHmac('sha256', secret);
         const digest = Buffer.from(hmac.update(rawBody).digest('hex'), 'hex');
-        const receivedSignature = Buffer.from(signature, 'hex');
-
-        if (!crypto.timingSafeEqual(digest, receivedSignature)) {
+        if (!crypto.timingSafeEqual(Buffer.from(signature, 'hex'), digest)) {
             return res.status(401).json({ error: 'Invalid signature.' });
         }
 
         const event = JSON.parse(rawBody.toString());
+        if (event.type !== 'order.succeeded') return res.status(200).json({ message: 'Event is not order.succeeded.'});
 
-        if (event.type !== 'order.succeeded' || !event.data?.id || !event.data?.customer?.email || !event.data?.product?.id) {
-            console.warn('Received invalid or non-order.succeeded webhook payload:', event);
+        const { id: orderId, customer, product } = event.data;
+        if (!orderId || !customer?.email || !product?.id) {
             return res.status(400).json({ error: 'Invalid webhook payload' });
         }
 
-        const orderId = event.data.id;
-        const customerEmail = event.data.customer.email.toLowerCase();
-        const customerName = event.data.customer.name || 'Valued Customer';
-        const productId = event.data.product.id;
-        
-        const planDetails = PRODUCT_ID_TO_PLAN[productId as keyof typeof PRODUCT_ID_TO_PLAN];
+        const planDetails = PLAN_DETAILS[product.id as keyof typeof PLAN_DETAILS];
+        if (!planDetails) return res.status(200).json({ message: 'Unknown product ID.' });
 
-        if (!planDetails) {
-            console.warn(`Webhook received for unknown product ID: ${productId}`);
-            return res.status(200).json({ message: 'Order for unknown product processed, no action taken.' });
-        }
-        
-        const orderProcessedKey = `order:${orderId}`;
-        if (await kv.get(orderProcessedKey)) {
+        if (await kvService.isOrderProcessed(orderId)) {
             return res.status(200).json({ message: 'Webhook already processed' });
         }
-        
-        let userRecord = await xata.db.users.filter({ email: customerEmail }).getFirst();
 
+        const customerEmail = customer.email.toLowerCase();
+        let user = await kvService.getUserByEmail(customerEmail);
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + 30);
 
-        if (userRecord) {
-            const newCredits = (userRecord.credits || 0) + planDetails.credits;
-            await userRecord.update({
-                name: userRecord.name || customerName, // Update name if it wasn't set
-                plan: planDetails.plan,
+        if (user) {
+            const newCredits = (user.credits || 0) + planDetails.credits;
+            await kvService.updateUser(customerEmail, {
+                name: user.name || customer.name || 'Valued Customer',
+                plan: planDetails.planName,
                 credits: newCredits,
                 subscriptionStatus: 'active',
-                planExpiryDate: expiryDate,
+                planExpiryDate: expiryDate.toISOString(),
             });
         } else {
-            // If user doesn't exist, create them with the purchased plan
-            await xata.db.users.create({
+            await kvService.createUser({
                 email: customerEmail,
-                name: customerName,
-                plan: planDetails.plan,
+                name: customer.name || 'Valued Customer',
+                plan: planDetails.planName,
                 credits: planDetails.credits,
                 subscriptionStatus: 'active',
-                planExpiryDate: expiryDate,
+                planExpiryDate: expiryDate.toISOString(),
             });
         }
         
-        await kv.set(orderProcessedKey, true, { ex: 86400 * 90 }); // Mark as processed
+        await kvService.addActiveSubscriber(customerEmail);
+        await kvService.markOrderAsProcessed(orderId);
 
-        console.log(`Successfully processed order ${orderId} for ${customerEmail}. Plan: ${planDetails.plan}, Credits Added: ${planDetails.credits}`);
-        
+        console.log(`Processed order ${orderId} for ${customerEmail}. Plan: ${planDetails.planName}`);
         return res.status(200).json({ message: 'Webhook processed successfully' });
 
     } catch (error) {
