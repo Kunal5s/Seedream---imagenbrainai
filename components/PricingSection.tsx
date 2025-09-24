@@ -1,7 +1,5 @@
 import React from 'react';
 import CheckIcon from './ui/CheckIcon';
-import { useAuth } from '../hooks/useAuth';
-import * as ReactRouterDom from 'react-router-dom';
 
 const plans = [
   {
@@ -52,8 +50,6 @@ const plans = [
 ];
 
 const PricingSection: React.FC = () => {
-    const { user } = useAuth();
-
     const handleStartFree = () => {
         const generator = document.querySelector('#generator-suite');
         if (generator) {
@@ -90,7 +86,6 @@ const PricingSection: React.FC = () => {
             </ul>
 
             {plan.link ? (
-                user ? (
                  <a
                     href={plan.link}
                     target="_blank"
@@ -99,19 +94,6 @@ const PricingSection: React.FC = () => {
                   >
                     Purchase Plan
                   </a>
-                ) : (
-                    <div>
-                        <ReactRouterDom.Link
-                            to="/login"
-                            className="block w-full text-center bg-green-500 text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 ease-in-out transform hover:bg-green-400 hover:shadow-lg hover:shadow-green-400/50 focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-opacity-50"
-                        >
-                            Login to Purchase
-                        </ReactRouterDom.Link>
-                        <p className="text-xs text-center text-gray-500 mt-2">
-                            Please sign in or create an account to upgrade your plan.
-                        </p>
-                    </div>
-                )
             ) : (
                 <button
                     onClick={handleStartFree}

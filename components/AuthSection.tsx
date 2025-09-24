@@ -51,20 +51,7 @@ const AuthSection: React.FC = () => {
     );
   }
   
-  return (
-    <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 text-center">
-      <h3 className="text-lg font-semibold text-green-300 mb-2">Join to Save Your Creations!</h3>
-      <p className="text-gray-400 mb-4 text-sm max-w-xl mx-auto">Create a free account to save images to the cloud, track your credits, and manage your plans.</p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <ReactRouterDom.Link to="/login" className="flex-1 bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-500 hover:text-black">
-          Sign In
-        </ReactRouterDom.Link>
-        <ReactRouterDom.Link to="/signup" className="flex-1 bg-green-500 text-black font-bold py-2 px-4 rounded-lg transition-colors hover:bg-green-400">
-          Sign Up for Free
-        </ReactRouterDom.Link>
-      </div>
-    </div>
-  );
+  return null;
 };
 
 export default AuthSection;
