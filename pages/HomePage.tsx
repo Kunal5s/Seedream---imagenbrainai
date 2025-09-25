@@ -1,18 +1,15 @@
-
-
-
 import React from 'react';
 // FIX: Add `Variants` to framer-motion import to correctly type animation variants.
 import { motion, Variants } from 'framer-motion';
 import GeneratorSuite from '../components/GeneratorSuite';
-import WhyChooseUs from '../components/WhyChooseUs';
+import WhyChooseUs from '../components/ui/WhyChooseUs';
 import MetaTags from '../components/MetaTags';
 import PricingSection from '../components/PricingSection';
 import HowItWorks from '../components/HowItWorks';
 import Testimonials from '../components/Testimonials';
 import CallToAction from '../components/CallToAction';
 import BlogFeedSection from '../components/BlogFeedSection';
-import HeroBackgroundAnimation from '../components/HeroBackgroundAnimation';
+import HeroBackgroundAnimation from '../components/ui/HeroBackgroundAnimation';
 
 // --- SVG Icons for components ---
 const CheckCircleIcon = () => (
