@@ -1,6 +1,5 @@
 // api/images/generate.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { db } from '../../services/firebase';
 import { uploadImageToR2 } from '../../services/r2';
 import { PLAN_DETAILS, Plan } from '../../config/plans';
@@ -9,10 +8,18 @@ import { UserStatus } from '../../services/licenseService';
 // MOCK: In a real app, you'd get this from a session cookie or JWT
 const MOCK_USER_ID = 'user_demo_123';
 
-if (!process.env.API_KEY) {
-    throw new Error("Missing API_KEY environment variable.");
-}
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getDimensions = (aspectRatioString: string): { width: number, height: number } => {
+    const baseSize = 1024;
+    const ratioName = aspectRatioString.match(/^(.*?)\s/)?.[1] || 'Square';
+    switch (ratioName) {
+        case 'Square': return { width: baseSize, height: baseSize };
+        case 'Portrait': return { width: 768, height: baseSize };
+        case 'Landscape': return { width: baseSize, height: 768 };
+        case 'Tall': return { width: 576, height: baseSize };
+        case 'Wide': return { width: 1344, height: 768 }; // Use a common wide format
+        default: return { width: baseSize, height: baseSize };
+    }
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -56,24 +63,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           throw new Error(`Not enough credits. You need ${totalCreditsNeeded} but only have ${userData.credits}.`);
         }
         
-        const fullPrompt = `${prompt}, ${style} style, ${mood} mood, ${lighting} lighting, ${color} color scheme. --no ${negativePrompt || 'text, watermark'}`;
+        const fullPrompt = `${prompt}, ${style}, ${mood} mood, ${lighting} lighting, ${color} color scheme, --no ${negativePrompt || 'text, watermark'}`;
+        const dims = getDimensions(aspectRatio);
 
         const imagePromises = Array.from({ length: numberOfImages }).map(async () => {
-          const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: fullPrompt,
-            config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/png',
-              aspectRatio: aspectRatio.match(/\((\d+:\d+)\)/)?.[1] as any || '1:1',
-            },
-          });
+          const seed = Math.floor(Math.random() * 100000);
+          const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${dims.width}&height=${dims.height}&seed=${seed}`;
           
-          if (!response.generatedImages || response.generatedImages.length === 0) {
-            throw new Error('Image generation failed to produce an image.');
+          const imageResponse = await fetch(url);
+          if (!imageResponse.ok) {
+            throw new Error(`Pollinations API failed with status: ${imageResponse.statusText}`);
           }
-
-          const base64Image = response.generatedImages[0].image.imageBytes;
+          
+          const imageBuffer = await imageResponse.arrayBuffer();
+          const base64Image = Buffer.from(imageBuffer).toString('base64');
+          
           const r2Url = await uploadImageToR2(base64Image, MOCK_USER_ID);
           
           // Save to history
@@ -98,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error("Image generation error:", error);
-    // Attempt to refund credits on failure
+    // Attempt to refund credits on failure by just returning current credit balance
     const userDoc = await userRef.get();
     if (userDoc.exists) {
         res.status(500).json({ message: error instanceof Error ? error.message : "An unknown error occurred.", credits: userDoc.data()?.credits });
