@@ -27,6 +27,7 @@ const BlogPage: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
+            // The getArticles function now returns the static, local data
             const fetchedPosts = await getArticles();
             setPosts(fetchedPosts);
         } catch (err) {

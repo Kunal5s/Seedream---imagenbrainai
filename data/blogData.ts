@@ -1,3 +1,6 @@
+// data/blogData.ts
+
+// Define shared types for author and blog post structures.
 export interface Author {
   name: string;
   avatarUrl: string;
@@ -9,136 +12,129 @@ export interface BlogPost {
   slug: string;
   title: string;
   excerpt: string;
-  content: string;
+  content: string; // Full HTML content
   published: string;
   author: Author;
   featuredImage: string | null;
   categories: string[];
   keywords?: string[];
-  originalUrl: string;
 }
 
-// --- Article Fetching Logic ---
+// --- Dynamic Blog Data Fetching ---
 
-// --- Helper Functions ---
-const slugify = (text: string): string => {
-    return text.toString().toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w\-]+/g, '')
-        .replace(/\-\-+/g, '-')
-        .replace(/^-+/, '').replace(/-+$/, '');
-};
-
-const enhanceBloggerThumbnail = (url: string | null): string | null => {
-    if (!url) return null;
-    // Request a larger, widescreen image for better quality cards
-    return url.replace(/\/(s\d+(-[a-zA-Z])?|w\d+-h\d+(-[a-zA-Z])?)\//, '/w1200-h630-c/');
-};
-
-const cleanTextForClient = (html: string): string => {
-    if (!html) return '';
-    // This logic should only run in the browser, not during a server-side build.
-    if (typeof window === 'undefined') {
-        let text = html.replace(/<[^>]*>/g, '');
-        text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        return text.replace(/[\s\u00A0]+/g, ' ').trim();
-    }
-    try {
-        const tempEl = document.createElement('div');
-        tempEl.innerHTML = html;
-        const text = tempEl.textContent || '';
-        return text.replace(/[\s\u00A0]+/g, ' ').trim();
-    } catch (e) {
-        console.error("DOM-based text cleaning failed, falling back to regex.", e);
-        let text = html.replace(/<[^>]*>/g, '');
-        text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        return text.replace(/[\s\u00A0]+/g, ' ').trim();
-    }
-};
-
-interface BloggerJsonFeed {
-    feed: {
-        title: { $t: string };
-        subtitle: { $t: string };
-        link: { rel: string; href: string }[];
-        entry?: any[];
-    }
-}
-
-const authorInfo: Author = {
+// Define a default author profile, as the Blogger API only provides the name.
+const defaultAuthor: Author = {
   name: 'Kunal Sonpitre',
   avatarUrl: 'https://avatar.iran.liara.run/public/boy?username=kunalsonpitre',
   bio: 'Kunal is a tech enthusiast and AI art evangelist based in Nashik. With a passion for exploring the intersection of human creativity and artificial intelligence, he delves into the latest advancements in generative technology. Through his articles on Seedream ImagenBrainAi, he aims to empower creators to unlock new possibilities in the digital art landscape.',
   location: 'Nashik, Maharashtra, India',
 };
 
+// In-memory cache to store fetched posts and avoid redundant API calls on the client-side
+let cachedPosts: BlogPost[] | null = null;
+
+/**
+ * Creates a URL-friendly slug from a string.
+ * @param title The title to convert.
+ * @returns The slugified title.
+ */
+const createSlug = (title: string): string => {
+  if (!title) return `untitled-${Date.now()}`;
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-'); // Replace multiple hyphens with a single one
+};
+
+/**
+ * Fetches and parses articles from our own internal, reliable API endpoint.
+ * @returns A promise that resolves to an array of BlogPost objects.
+ */
+const fetchAndParseArticles = async (): Promise<BlogPost[]> => {
+    // Point to our new, reliable serverless function
+    const apiUrl = '/api/fetch-blog';
+    
+    try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch from internal API with status: ${response.statusText}`);
+        }
+        
+        const bloggerData = await response.json();
+
+        if (!bloggerData.feed || !Array.isArray(bloggerData.feed.entry)) {
+            console.warn('Blogger data format is unexpected or contains no entries:', bloggerData);
+            return [];
+        }
+
+        const posts: BlogPost[] = bloggerData.feed.entry.map((entry: any): BlogPost => {
+            const contentHtml = entry.content?.$t || '';
+            
+            // Create a simple excerpt by stripping HTML and truncating
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = contentHtml;
+            const textContent = tempDiv.textContent || tempDiv.innerText || '';
+            const excerpt = textContent.substring(0, 150) + '...';
+
+            // Get a higher resolution featured image if available
+            let imageUrl = entry['media$thumbnail']?.url || null;
+            if (imageUrl) {
+                // Request a larger image for better quality
+                imageUrl = imageUrl.replace(/\/s\d+(-c)?\//, '/s1600/');
+            }
+            
+            const authorName = entry.author?.[0]?.name?.$t || 'Anonymous';
+
+            return {
+                slug: createSlug(entry.title.$t),
+                title: entry.title.$t,
+                excerpt: excerpt,
+                content: contentHtml,
+                published: entry.published.$t,
+                author: { ...defaultAuthor, name: authorName },
+                featuredImage: imageUrl,
+                categories: entry.category?.map((cat: any) => cat.term) || [],
+            };
+        });
+
+        // Sort by date, most recent first
+        return posts.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+
+    } catch (error) {
+        console.error("Error fetching or parsing blog articles:", error);
+        throw new Error("Could not load articles. Please check your connection and try again.");
+    }
+};
+
+/**
+ * Returns all articles, using a cache to avoid re-fetching on the client.
+ * The server-side function also has its own cache for performance.
+ * @param forceRefresh - If true, bypasses the client cache and re-fetches data.
+ * @returns A promise that resolves to an array of BlogPost objects.
+ */
 export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => {
-  try {
-    const BLOGGER_BASE_URL = 'https://seedream-imagenbrainai.blogspot.com/feeds/posts/default';
-    const MAX_RESULTS = 100;
-
-    const feedUrl = new URL(BLOGGER_BASE_URL);
-    feedUrl.searchParams.set('alt', 'json');
-    feedUrl.searchParams.set('start-index', '1');
-    feedUrl.searchParams.set('max-results', String(MAX_RESULTS));
-    
-    if (forceRefresh) {
-        feedUrl.searchParams.set('timestamp', Date.now().toString());
-    }
-
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl.toString())}`;
-    const proxyResponse = await fetch(proxyUrl);
-    
-    if (!proxyResponse.ok) {
-        throw new Error(`Failed to fetch articles. Server responded with status: ${proxyResponse.status}`);
-    }
-    
-    const proxyData = await proxyResponse.json();
-    if (proxyData.status && proxyData.status.http_code >= 400) {
-         throw new Error(`Error from feed source: ${proxyData.status.http_code}. Please check the Blogger URL.`);
-    }
-
-    const bloggerJson: BloggerJsonFeed = JSON.parse(proxyData.contents);
-    
-    const apiArticles = (bloggerJson.feed.entry || []).map(entry => {
-        const title = entry.title.$t;
-        const content = entry.content?.$t || entry.summary?.$t || '';
-        return {
-            guid: entry.id.$t,
-            slug: slugify(title),
-            link: entry.link.find((l: any) => l.rel === 'alternate')?.href || '',
-            title,
-            pubDate: entry.published.$t,
-            description: cleanTextForClient(entry.summary?.$t || content).substring(0, 250),
-            content: content,
-            thumbnail: enhanceBloggerThumbnail(entry.media$thumbnail?.url || null),
-        };
-    });
-
-    const processedPosts: BlogPost[] = apiArticles.map(apiArticle => ({
-      slug: apiArticle.slug,
-      title: apiArticle.title,
-      excerpt: apiArticle.description,
-      content: apiArticle.content,
-      published: apiArticle.pubDate,
-      author: authorInfo,
-      featuredImage: apiArticle.thumbnail,
-      categories: [],
-      keywords: [],
-      originalUrl: apiArticle.link,
-    }));
-    
-    processedPosts.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
-
-    return processedPosts;
-
-  } catch (error) {
-    console.error("Error fetching articles:", error);
-    throw error;
+  if (cachedPosts && !forceRefresh) {
+    return Promise.resolve(cachedPosts);
   }
+  
+  const posts = await fetchAndParseArticles();
+  cachedPosts = posts;
+  return posts;
 };
 
+/**
+ * Finds a single article by its slug.
+ * @param slug - The slug of the article to find.
+ * @returns A promise that resolves to a single BlogPost or undefined if not found.
+ */
 export const getArticleBySlug = async (slug: string): Promise<BlogPost | undefined> => {
+  // Ensure the articles are fetched and cached first
   const articles = await getArticles();
-  return articles.find(post => post.slug === slug);
+  const article = articles.find(post => post.slug === slug);
+  return article;
 };
+
+// New type file for shared types
+export { }; // This can be removed if types are in a separate file, but here it keeps the structure.
