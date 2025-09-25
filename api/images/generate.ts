@@ -57,18 +57,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const generationPromises = Array.from({ length: numberOfImages }).map(async () => {
         // Construct a detailed prompt for better results
         const fullPrompt = `${prompt}, ${style}, ${mood} mood, ${lighting} lighting, ${color} color scheme`;
-        // For OpenRouter, it's better to use the negative_prompt field if the model supports it. 
-        // We'll build a request body that includes it.
         const ratioDetails = IMAGEN_BRAIN_RATIOS.find(r => r.name === aspectRatio) || IMAGEN_BRAIN_RATIOS[0];
+        
+        // Dynamically get the referer and site title from the request for OpenRouter compliance
+        const referer = req.headers.referer || 'https://www.imagenbrainai.in/';
+        const siteTitle = new URL(referer).hostname || 'Seedream ImagenBrainAi';
 
-        // NEW: OpenRouter API call
+        // NEW: OpenRouter API call with dynamic headers
         const openRouterResponse = await fetch('https://openrouter.ai/api/v1/images/generations', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
                 'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://www.imagenbrainai.in/',
-                'X-Title': 'Seedream ImagenBrainAi',
+                'HTTP-Referer': referer,
+                'X-Title': siteTitle,
             },
             body: JSON.stringify({
                 model: model,
