@@ -161,6 +161,8 @@ export const COLORS: string[] = [
 
 // NEW: Add models for OpenRouter
 export const OPEN_ROUTER_MODELS: { name: string; id: string; }[] = [
+  { name: 'Google Imagen 4', id: 'google/imagen-4.0' },
+  { name: 'Pollinations.ai (Fast)', id: 'pollinations/pollinations-ai' },
   { name: 'Playground v2.5', id: 'playgroundai/playground-v2.5' },
   { name: 'Kandinsky 3.1', id: 'kandinsky-community/kandinsky-3.1' },
   { name: 'Stable Diffusion XL', id: 'stabilityai/sdxl' },

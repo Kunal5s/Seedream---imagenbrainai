@@ -1,5 +1,7 @@
 // api/images/generate.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { Buffer } from 'buffer';
+import { GoogleGenAI } from '@google/genai';
 import { db } from '../../services/firebase';
 import { uploadImageToR2 } from '../../services/r2';
 import { PLAN_DETAILS, Plan } from '../../config/plans';
@@ -37,7 +39,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userRef = db.collection('users').doc(MOCK_USER_ID);
   
   try {
-    // Step 1: Pre-flight check for user and credits (outside transaction)
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
       throw new Error('User not found.');
@@ -49,52 +50,96 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const totalCreditsNeeded = numberOfImages * creditsPerImage;
 
     if (userData.credits < totalCreditsNeeded) {
-      // Use 402 Payment Required for insufficient funds
       return res.status(402).json({ message: `Not enough credits. You need ${totalCreditsNeeded} but only have ${userData.credits}.` });
     }
     
-    // Step 2: Create an array of image generation promises to run in parallel for maximum speed
     const generationPromises = Array.from({ length: numberOfImages }).map(async () => {
-        // Construct a detailed prompt for better results
-        const fullPrompt = `${prompt}, ${style}, ${mood} mood, ${lighting} lighting, ${color} color scheme`;
+        const fullPrompt = [
+          prompt,
+          style !== 'Photorealistic' ? style : '',
+          mood !== 'Neutral' ? `${mood} mood` : '',
+          lighting !== 'Neutral' ? `${lighting} lighting` : '',
+          color !== 'Default' ? `${color} color scheme` : '',
+        ].filter(Boolean).join(', ');
+
         const ratioDetails = IMAGEN_BRAIN_RATIOS.find(r => r.name === aspectRatio) || IMAGEN_BRAIN_RATIOS[0];
         
-        // Dynamically get the referer and site title from the request for OpenRouter compliance
-        const referer = req.headers.referer || 'https://www.imagenbrainai.in/';
-        const siteTitle = new URL(referer).hostname || 'Seedream ImagenBrainAi';
+        let base64Image: string;
 
-        // NEW: OpenRouter API call with dynamic headers
-        const openRouterResponse = await fetch('https://openrouter.ai/api/v1/images/generations', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                'Content-Type': 'application/json',
-                'HTTP-Referer': referer,
-                'X-Title': siteTitle,
-            },
-            body: JSON.stringify({
-                model: model,
+        if (model === 'google/imagen-4.0') {
+            if (!process.env.GOOGLE_API_KEY) {
+                throw new Error('Google API key is not configured on the server.');
+            }
+            const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+            
+            const response = await ai.models.generateImages({
+                model: 'imagen-4.0-generate-001',
                 prompt: fullPrompt,
-                negative_prompt: negativePrompt,
-                n: 1, // Generate one image per API call
-                width: ratioDetails.width,
-                height: ratioDetails.height,
-                response_format: 'b64_json', // Request base64 encoded image
-            })
-        });
+                config: {
+                    numberOfImages: 1,
+                    outputMimeType: 'image/png',
+                    aspectRatio: ratioDetails.aspectRatio,
+                },
+            });
 
-        if (!openRouterResponse.ok) {
-            const errorBody = await openRouterResponse.json().catch(() => ({ error: { message: 'Could not read error body from OpenRouter.' }}));
-            console.error(`OpenRouter API returned an error. Status: ${openRouterResponse.status}. Body:`, errorBody);
-            throw new Error(`Image provider failed: ${errorBody.error?.message || openRouterResponse.statusText}`);
+            const b64Json = response.generatedImages[0]?.image?.imageBytes;
+            if (!b64Json) {
+                throw new Error('Google Imagen API did not return a valid image.');
+            }
+            base64Image = b64Json;
+
+        } else if (model === 'pollinations/pollinations-ai') {
+            const pollinationPrompt = encodeURIComponent(fullPrompt);
+            const pollinationUrl = `https://image.pollinations.ai/prompt/${pollinationPrompt}?width=${ratioDetails.width}&height=${ratioDetails.height}&nologo=true`;
+            
+            const imageResponse = await fetch(pollinationUrl);
+            if (!imageResponse.ok) {
+                throw new Error(`Pollinations.ai failed with status: ${imageResponse.statusText}`);
+            }
+            
+            const imageBuffer = await imageResponse.arrayBuffer();
+            base64Image = Buffer.from(imageBuffer).toString('base64');
+        } else {
+            const referer = req.headers.referer || 'https://www.imagenbrainai.in/';
+            const siteTitle = new URL(referer).hostname || 'Seedream ImagenBrainAi';
+    
+            const openRouterResponse = await fetch('https://openrouter.ai/api/v1/images/generations', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': referer,
+                    'X-Title': siteTitle,
+                },
+                body: JSON.stringify({
+                    model: model,
+                    prompt: fullPrompt,
+                    negative_prompt: negativePrompt,
+                    n: 1,
+                    width: ratioDetails.width,
+                    height: ratioDetails.height,
+                    response_format: 'b64_json',
+                })
+            });
+    
+            if (!openRouterResponse.ok) {
+                const errorBody = await openRouterResponse.json().catch(() => ({ error: { message: 'Could not read error body from OpenRouter.' }}));
+                console.error(`OpenRouter API returned an error. Status: ${openRouterResponse.status}. Body:`, errorBody);
+                throw new Error(`Image provider failed: ${errorBody.error?.message || openRouterResponse.statusText}`);
+            }
+            
+            const responseData = await openRouterResponse.json();
+            const b64Json = responseData?.data?.[0]?.b64_json;
+
+            if (!b64Json) {
+                console.error('OpenRouter API did not return a base64 image.', responseData);
+                throw new Error('Image provider did not return a valid image.');
+            }
+            base64Image = b64Json;
         }
-        
-        const responseData = await openRouterResponse.json();
-        const base64Image = responseData?.data?.[0]?.b64_json;
 
         if (!base64Image) {
-            console.error('OpenRouter API did not return a base64 image.', responseData);
-            throw new Error('Image provider did not return a valid image.');
+            throw new Error('Failed to obtain a base64 image from the provider.');
         }
 
         const r2Url = await uploadImageToR2(base64Image, MOCK_USER_ID);
@@ -106,10 +151,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
     });
     
-    // Execute all promises concurrently
     const generatedImagesData = await Promise.all(generationPromises);
 
-    // Step 3: Write to database in a single, short-lived transaction
     let finalCredits = 0;
     await db.runTransaction(async (transaction) => {
         const freshUserDoc = await transaction.get(userRef);
@@ -138,7 +181,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error("Image generation error:", error);
-    // On failure, return the current credit balance without making changes.
     const userDoc = await userRef.get();
     const currentCredits = userDoc.exists ? userDoc.data()?.credits : 0;
     res.status(500).json({ 
