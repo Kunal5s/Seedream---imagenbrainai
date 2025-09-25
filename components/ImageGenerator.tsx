@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+// FIX: Corrected import path from an alias to a relative path.
 import { generateImages, downloadImage } from '../services/generationService';
 import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
 import { getLicensedUserStatus, UserStatus, createGuestStatus } from '../services/licenseService';

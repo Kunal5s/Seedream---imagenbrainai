@@ -1,6 +1,7 @@
 import React from 'react';
 import MetaTags from '../components/MetaTags';
-import { motion } from 'framer-motion';
+// FIX: Add `Variants` to framer-motion import to correctly type animation variants.
+import { motion, Variants } from 'framer-motion';
 
 // SVG Icons for social platforms
 const DiscordIcon = () => (
@@ -43,7 +44,8 @@ const communityLinks = [
   },
 ];
 
-const cardVariants = {
+// FIX: Explicitly type `cardVariants` with `Variants` from framer-motion to resolve type error.
+const cardVariants: Variants = {
   offscreen: { y: 50, opacity: 0 },
   onscreen: { y: 0, opacity: 1, transition: { type: "spring", bounce: 0.4, duration: 0.8 } }
 };

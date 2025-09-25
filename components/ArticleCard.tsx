@@ -1,13 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+// FIX: Add `Variants` to framer-motion import to correctly type animation variants.
+import { motion, Variants } from 'framer-motion';
 import { BlogPost } from '../data/blogData';
 
 interface ArticleCardProps {
   post: BlogPost;
 }
 
-const cardVariants = {
+// FIX: Explicitly type `cardVariants` with `Variants` from framer-motion to resolve type error.
+const cardVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
