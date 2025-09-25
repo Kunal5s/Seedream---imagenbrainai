@@ -1,53 +1,6 @@
 import React from 'react';
 import CheckIcon from './ui/CheckIcon';
-
-const plans = [
-  {
-    name: 'Free Trial',
-    price: '$0',
-    for: 'Start Your Creative Journey',
-    isHighlighted: true,
-    features: [
-      '500 Initial Credits',
-      '5 Credits per Image',
-      'Standard Generation Speed',
-      'Community Support'
-    ],
-  },
-  {
-    name: 'Booster',
-    price: '$20',
-    for: 'For Power Users',
-    link: 'https://buy.polar.sh/polar_cl_dxRr7iGKWfMzpHYZlFGd5tY18ICJM30sDgGf80Y0dCj',
-    features: [
-      '5,000 Credits',
-      'Commercial License',
-      'Priority Support',
-    ],
-  },
-  {
-    name: 'Premium',
-    price: '$50',
-    for: 'For Professionals',
-    link: 'https://buy.polar.sh/polar_cl_lTBWXKtStKOn44M16Qpb2LdlE1YC7OaxWNDDo4RTpge',
-    features: [
-      '15,000 Credits',
-      'Advanced API Access (Coming Soon)',
-      'Custom Style Training (Coming Soon)',
-    ],
-  },
-  {
-    name: 'Professional',
-    price: '$100',
-    for: 'For Enterprises',
-    link: 'https://buy.polar.sh/polar_cl_SrTKX1rcDoCW5jAoj4lZsmqnwNoocvi8oGZLu4WmoMa',
-    features: [
-      '30,000 Credits',
-      'Dedicated Account Manager',
-      'Custom AI Models',
-    ],
-  },
-];
+import { PLANS } from '../config/plans';
 
 const PricingSection: React.FC = () => {
     const handleStartFree = () => {
@@ -70,10 +23,10 @@ const PricingSection: React.FC = () => {
         <p className="text-gray-400 mt-2">Choose the plan that's right for you. Start for free.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-        {plans.map((plan, index) => (
+        {PLANS.map((plan, index) => (
           <div key={index} className={`bg-gray-900 border ${plan.isHighlighted ? 'border-green-400 shadow-green-400/20' : 'border-gray-700/50'} rounded-lg p-6 flex flex-col shadow-lg`}>
             <h3 className={`text-2xl font-semibold ${plan.isHighlighted ? 'text-green-300' : 'text-white'}`}>{plan.name}</h3>
-            <p className="text-5xl font-bold my-4 text-white">{plan.price}<span className="text-lg font-normal text-gray-400">{plan.price !== '$0' ? '/mo' : ''}</span></p>
+            <p className="text-5xl font-bold my-4 text-white">{plan.price}<span className="text-lg font-normal text-gray-400">{plan.price !== '$0' ? '' : ''}</span></p>
             <p className="text-gray-300 mb-6">{plan.for}</p>
             
             <ul className="space-y-3 mb-8 flex-grow">

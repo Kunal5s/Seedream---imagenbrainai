@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { generateImages as generatePollinationsImages, downloadImage } from '../services/pollinationsService';
+import { useNavigate } from 'react-router-dom';
+import { generateImages, downloadImage } from '../services/generationService';
 import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
+import { getLicensedUserStatus, UserStatus, createGuestStatus } from '../services/licenseService';
 import { PLAN_DETAILS } from '../config/plans';
 import Button from './ui/Button';
 import Select from './ui/Select';
@@ -10,44 +12,12 @@ import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
 import SuccessWrapper from './ui/SuccessWrapper';
 import RegenerateIcon from './ui/RegenerateIcon';
 import DownloadIcon from './ui/DownloadIcon';
-
-// Define types locally as services are removed
-interface LicenseStatus {
-  name: string | null;
-  plan: 'Free Trial';
-  credits: number;
-  email: string | null;
-  subscriptionStatus: 'free_trial' | null;
-}
-
-const ANONYMOUS_USER_KEY = 'anonymousUserStatus';
-const FREE_TRIAL_CREDITS = 500;
-
-const getAnonymousStatus = (): LicenseStatus => {
-    try {
-        const storedStatus = localStorage.getItem(ANONYMOUS_USER_KEY);
-        if (storedStatus) {
-            const parsed = JSON.parse(storedStatus);
-            // Ensure the structure is correct, especially plan name
-            return {
-                ...parsed,
-                plan: 'Free Trial',
-                subscriptionStatus: 'free_trial'
-            };
-        }
-    } catch (error) {
-        console.error("Could not parse anonymous user status:", error);
-    }
-    const defaultStatus: LicenseStatus = {
-        name: 'Guest',
-        plan: 'Free Trial',
-        credits: FREE_TRIAL_CREDITS,
-        email: null,
-        subscriptionStatus: 'free_trial',
-    };
-    localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(defaultStatus));
-    return defaultStatus;
-};
+import LicenseModal from './LicenseModal';
+import PlanHistoryModal from './PlanHistoryModal';
+import KeyIcon from './ui/KeyIcon';
+import HistoryIcon from './ui/HistoryIcon';
+import Spinner from './ui/Spinner';
+import GalleryIcon from './ui/GalleryIcon';
 
 interface ImageState {
     key: number;
@@ -73,9 +43,26 @@ const ImageGenerator: React.FC = () => {
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
   const cancelGeneration = useRef(false);
 
-  const [currentUserStatus, setCurrentUserStatus] = useState(getAnonymousStatus());
+  // NEW: State is now managed asynchronously
+  const [currentUserStatus, setCurrentUserStatus] = useState<UserStatus>(createGuestStatus());
+  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const navigate = useNavigate();
 
-  const creditsPerImage = PLAN_DETAILS['FREE_TRIAL'].creditsPerImage;
+  // NEW: Fetch user status from backend on initial load
+  useEffect(() => {
+    const fetchStatus = async () => {
+      setIsLoadingStatus(true);
+      const status = await getLicensedUserStatus();
+      setCurrentUserStatus(status);
+      setIsLoadingStatus(false);
+    };
+    fetchStatus();
+  }, []);
+
+  const activePlanDetails = Object.values(PLAN_DETAILS).find(p => p.name === currentUserStatus.plan) || PLAN_DETAILS['FREE_TRIAL'];
+  const creditsPerImage = activePlanDetails.creditsPerImage;
 
   useEffect(() => {
     setImages(
@@ -86,22 +73,8 @@ const ImageGenerator: React.FC = () => {
       }))
     );
   }, [numberOfImages]);
-
-  const constructFinalPrompt = () => {
-    let finalPrompt = prompt;
-    if (style !== 'Photorealistic') finalPrompt += `, ${style} style`;
-    if (mood !== 'Neutral') finalPrompt += `, ${mood} mood`;
-    if (lighting !== 'Neutral') finalPrompt += `, ${lighting} lighting`;
-    if (color !== 'Default') finalPrompt += `, ${color}`;
-    if (negativePrompt) finalPrompt += ` --no ${negativePrompt}`;
-    return finalPrompt;
-  };
   
-  const deductCredits = (amount: number) => {
-      const creditCost = amount * creditsPerImage;
-      const newCredits = currentUserStatus.credits - creditCost;
-      const newStatus = {...currentUserStatus, credits: newCredits};
-      localStorage.setItem(ANONYMOUS_USER_KEY, JSON.stringify(newStatus));
+  const handleLicenseActivationSuccess = (newStatus: UserStatus) => {
       setCurrentUserStatus(newStatus);
   };
 
@@ -111,9 +84,9 @@ const ImageGenerator: React.FC = () => {
       return;
     }
     
-    const creditCost = numberOfImages * creditsPerImage;
-    if (currentUserStatus.credits < creditCost) {
-      setGlobalError(`Not enough credits. You have ${currentUserStatus.credits}. Visit our Pricing section to see available plans.`);
+    const creditsNeeded = numberOfImages * creditsPerImage;
+    if (currentUserStatus.credits < creditsNeeded) {
+      setGlobalError(`Not enough credits. You have ${currentUserStatus.credits}. Visit our Pricing section or activate a license.`);
       return;
     }
 
@@ -124,20 +97,16 @@ const ImageGenerator: React.FC = () => {
     setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
 
     try {
-      deductCredits(numberOfImages);
-
-      const finalPrompt = constructFinalPrompt();
-      const imageUrls = await generatePollinationsImages(finalPrompt, aspectRatio.aspectRatio, numberOfImages);
+      // NEW: Call the backend generation service
+      const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages);
       
+      // NEW: Update credit balance from the server's response
+      setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
+
       for (let i = 0; i < imageUrls.length; i++) {
         if (cancelGeneration.current) {
             setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
             break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 2500)); 
-        if (cancelGeneration.current) {
-          setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
-          break;
         }
         setImages(prev => prev.map((img, index) => 
             index === i ? { ...img, status: 'success', src: imageUrls[i], key: Date.now() + i } : img
@@ -148,6 +117,9 @@ const ImageGenerator: React.FC = () => {
       const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
       setGlobalError(errorMsg);
       setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
+      // The backend should handle refunding credits on failure, but we can refetch status to be sure.
+      const status = await getLicensedUserStatus();
+      setCurrentUserStatus(status);
     } finally {
       setIsGenerating(false);
     }
@@ -160,7 +132,7 @@ const ImageGenerator: React.FC = () => {
   
   const handleRegenerateSingle = async (index: number) => {
     if (currentUserStatus.credits < creditsPerImage) {
-      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits. You have ${currentUserStatus.credits}.` } : img));
+      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits.` } : img));
       return;
     }
     if (!prompt) {
@@ -170,36 +142,79 @@ const ImageGenerator: React.FC = () => {
     setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'loading', src: null, error: null } : img));
     
     try {
-        deductCredits(1);
-        const finalPrompt = constructFinalPrompt();
-        const imageUrls = await generatePollinationsImages(finalPrompt, aspectRatio.aspectRatio, 1);
+        const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, 1);
+        
+        setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
+        
         setImages(prev => prev.map((img, i) => 
             i === index ? { ...img, status: 'success', src: imageUrls[0], key: Date.now() + i } : img
         ));
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
+        const status = await getLicensedUserStatus();
+        setCurrentUserStatus(status);
     }
-  };
-
-  const handleDownload = (imageUrl: string) => {
-    downloadImage(imageUrl, prompt, 'png');
   };
   
   const creditsNeeded = numberOfImages * creditsPerImage;
   const hasEnoughCredits = currentUserStatus.credits >= creditsNeeded;
+  
+  if (isLoadingStatus) {
+    return <div className="flex justify-center items-center h-96"><Spinner /></div>;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-center sm:text-left">
-                <p className="text-xs text-gray-400">Welcome, Guest!</p>
-                <span className="font-semibold text-green-300">Plan:</span>
-                <span className="ml-2 text-gray-300">{currentUserStatus.plan}</span>
+       <LicenseModal 
+        isOpen={isLicenseModalOpen}
+        onClose={() => setIsLicenseModalOpen(false)}
+        onSuccess={handleLicenseActivationSuccess}
+      />
+       <PlanHistoryModal 
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        licenses={currentUserStatus?.licenses || []}
+       />
+      <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <div>
+                    <p className="text-xs text-gray-400">Welcome, {currentUserStatus?.name || 'Guest'}!</p>
+                    <p>
+                        <span className="font-semibold text-green-300">Plan:</span>
+                        <span className="ml-2 text-gray-300">{currentUserStatus?.plan}</span>
+                    </p>
+                </div>
+                 <div>
+                    <p className="text-xs text-gray-400">&nbsp;</p>
+                    <p>
+                        <span className="font-semibold text-green-300">Credits:</span>
+                        <span className="ml-2 text-gray-300">{currentUserStatus?.credits.toLocaleString() || 0}</span>
+                    </p>
+                </div>
             </div>
-            <div className="text-center sm:text-left">
-                <span className="font-semibold text-green-300">Credits:</span>
-                <span className="ml-2 text-gray-300">{currentUserStatus.credits}</span>
+             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <button
+                    onClick={() => setIsLicenseModalOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-green-300 text-sm font-semibold py-2 px-4 rounded-lg border border-green-400/30 transition-all duration-300 transform hover:bg-green-400/10 focus:outline-none focus:ring-2 ring-green-400"
+                >
+                    <KeyIcon className="w-4 h-4" />
+                    Activate License
+                </button>
+                <button
+                    onClick={() => setIsHistoryModalOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-gray-300 text-sm font-semibold py-2 px-4 rounded-lg border border-gray-600/50 transition-all duration-300 transform hover:bg-white/10 focus:outline-none focus:ring-2 ring-gray-400"
+                >
+                    <HistoryIcon className="w-4 h-4" />
+                    View Plan History
+                </button>
+                <button
+                    onClick={() => navigate('/history')}
+                    className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-gray-300 text-sm font-semibold py-2 px-4 rounded-lg border border-gray-600/50 transition-all duration-300 transform hover:bg-white/10 focus:outline-none focus:ring-2 ring-gray-400"
+                >
+                    <GalleryIcon className="w-4 h-4" />
+                    Image History
+                </button>
             </div>
         </div>
       <div>
@@ -290,8 +305,8 @@ const ImageGenerator: React.FC = () => {
          </div>
       )}
       <div className="text-center">
-        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || !hasEnoughCredits}>
-            {isGenerating ? 'Stop Generating' : `Generate Images (${creditsNeeded} Credits)`}
+        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || !hasEnoughCredits || isGenerating}>
+            {isGenerating ? 'Stop Generating' : `Generate Images (~${creditsNeeded} Credits)`}
         </Button>
         {!hasEnoughCredits && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please see our pricing plans.</p>}
       </div>
@@ -317,7 +332,7 @@ const ImageGenerator: React.FC = () => {
                       <RegenerateIcon className="w-5 h-5" />
                     </button>
                     <button 
-                      onClick={() => handleDownload(image.src!)} 
+                      onClick={() => downloadImage(image.src!, prompt)} 
                       className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
                       title="Download as PNG">
                       <DownloadIcon className="w-5 h-5" />

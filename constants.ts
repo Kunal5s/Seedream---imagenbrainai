@@ -158,5 +158,3 @@ export const COLORS: string[] = [
   'Deep Sea Tones',
   'Galactic Nebula Colors'
 ];
-
-export const CREDITS_PER_IMAGE = 5;
