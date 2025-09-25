@@ -23,11 +23,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     mood, 
     lighting, 
     color, 
-    numberOfImages = 1 
+    numberOfImages = 1,
+    model
   } = req.body;
 
   if (!prompt) {
     return res.status(400).json({ message: 'Prompt is required.' });
+  }
+  if (!model) {
+    return res.status(400).json({ message: 'AI Model is required.' });
   }
 
   const userRef = db.collection('users').doc(MOCK_USER_ID);
@@ -51,46 +55,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Step 2: Create an array of image generation promises to run in parallel for maximum speed
     const generationPromises = Array.from({ length: numberOfImages }).map(async () => {
-        const fullPrompt = `${prompt}, ${style} style, ${mood}, ${lighting}, ${color} theme, --no ${negativePrompt || 'text, watermark'}`;
+        // Construct a detailed prompt for better results
+        const fullPrompt = `${prompt}, ${style}, ${mood} mood, ${lighting} lighting, ${color} color scheme`;
+        // For OpenRouter, it's better to use the negative_prompt field if the model supports it. 
+        // We'll build a request body that includes it.
         const ratioDetails = IMAGEN_BRAIN_RATIOS.find(r => r.name === aspectRatio) || IMAGEN_BRAIN_RATIOS[0];
 
-        const pollResponse = await fetch('https://api.pollinations.ai/generate', {
+        // NEW: OpenRouter API call
+        const openRouterResponse = await fetch('https://openrouter.ai/api/v1/images/generations', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://www.imagenbrainai.in/',
+                'X-Title': 'Seedream ImagenBrainAi',
+            },
             body: JSON.stringify({
+                model: model,
                 prompt: fullPrompt,
+                negative_prompt: negativePrompt,
+                n: 1, // Generate one image per API call
                 width: ratioDetails.width,
                 height: ratioDetails.height,
-                watermark: false
+                response_format: 'b64_json', // Request base64 encoded image
             })
         });
 
-        if (!pollResponse.ok) {
-            const errorBody = await pollResponse.text().catch(() => 'Could not read error body.');
-            console.error(`Pollinations API returned an error. Status: ${pollResponse.status}. Body: ${errorBody}`);
-            throw new Error(`Image provider failed with status: ${pollResponse.statusText}`);
+        if (!openRouterResponse.ok) {
+            const errorBody = await openRouterResponse.json().catch(() => ({ error: { message: 'Could not read error body from OpenRouter.' }}));
+            console.error(`OpenRouter API returned an error. Status: ${openRouterResponse.status}. Body:`, errorBody);
+            throw new Error(`Image provider failed: ${errorBody.error?.message || openRouterResponse.statusText}`);
         }
         
-        const responseData = await pollResponse.json();
-        const imageUrl = responseData?.image_url;
+        const responseData = await openRouterResponse.json();
+        const base64Image = responseData?.data?.[0]?.b64_json;
 
-        if (!imageUrl) {
-            console.error('Pollinations API did not return an image_url.', responseData);
-            throw new Error('Image provider did not return a valid image URL.');
+        if (!base64Image) {
+            console.error('OpenRouter API did not return a base64 image.', responseData);
+            throw new Error('Image provider did not return a valid image.');
         }
 
-        const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) {
-            throw new Error(`Failed to fetch the generated image from URL: ${imageResponse.statusText}`);
-        }
-        
-        const contentType = imageResponse.headers.get('content-type');
-        if (!contentType || !contentType.startsWith('image/')) {
-            throw new Error('Image provider returned an invalid content type. The service may be temporarily down.');
-        }
-        
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const base64Image = Buffer.from(imageBuffer).toString('base64');
         const r2Url = await uploadImageToR2(base64Image, MOCK_USER_ID);
         
         return {

@@ -158,3 +158,17 @@ export const COLORS: string[] = [
   'Deep Sea Tones',
   'Galactic Nebula Colors'
 ];
+
+// NEW: Add models for OpenRouter
+export const OPEN_ROUTER_MODELS: { name: string; id: string; }[] = [
+  { name: 'Playground v2.5', id: 'playgroundai/playground-v2.5' },
+  { name: 'Kandinsky 3.1', id: 'kandinsky-community/kandinsky-3.1' },
+  { name: 'Stable Diffusion XL', id: 'stabilityai/sdxl' },
+  { name: 'SDXL Lightning', id: 'fal.ai/stable-diffusion-xl-lightning' },
+  { name: 'RealVisXL V4.0', id: 'fofr/realvisxl-v4.0' },
+  { name: 'Dreamshaper XL', id: 'lykon/dreamshaper-xl-1.0' },
+  { name: 'Juggernaut XL v8', id: 'fofr/juggernaut-xl-v8' },
+  { name: 'Open DALL-E v1.1', id: 'open-dalle/open-dalle-v1.1' },
+  { name: 'LCM SDXL', id: 'segmind/sdxl-1.0-lcm' },
+  { name: 'DeepFloyd IF', id: 'deepfloyd/if' },
+];

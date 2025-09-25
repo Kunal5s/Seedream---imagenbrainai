@@ -12,9 +12,10 @@ export const generateImages = (
     mood: string, 
     lighting: string, 
     color: string, 
-    numberOfImages: number
+    numberOfImages: number,
+    model: string
 ) => {
-    return apiGenerateImages(prompt, negativePrompt, style, aspectRatio, mood, lighting, color, numberOfImages);
+    return apiGenerateImages(prompt, negativePrompt, style, aspectRatio, mood, lighting, color, numberOfImages, model);
 };
 
 /**

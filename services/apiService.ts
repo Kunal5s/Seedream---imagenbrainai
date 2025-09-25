@@ -74,7 +74,8 @@ export const apiGenerateImages = (
     mood: string, 
     lighting: string, 
     color: string, 
-    numberOfImages: number
+    numberOfImages: number,
+    model: string
 ): Promise<{ imageUrls: string[], credits: number }> => {
     return fetchApi<{ imageUrls: string[], credits: number }>('/images/generate', {
         method: 'POST',
@@ -86,7 +87,8 @@ export const apiGenerateImages = (
             mood, 
             lighting, 
             color, 
-            numberOfImages 
+            numberOfImages,
+            model
         }),
     });
 };

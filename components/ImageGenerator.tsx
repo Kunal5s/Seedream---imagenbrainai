@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { generateImages, downloadImage } from '../services/generationService';
-import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS } from '../constants';
+import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS, OPEN_ROUTER_MODELS } from '../constants';
 import { getLicensedUserStatus, UserStatus, createGuestStatus } from '../services/licenseService';
 import { PLAN_DETAILS } from '../config/plans';
 import Button from './ui/Button';
@@ -29,6 +29,7 @@ interface ImageState {
 const ImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [negativePrompt, setNegativePrompt] = useState('');
+  const [model, setModel] = useState(OPEN_ROUTER_MODELS[0].id);
   const [style, setStyle] = useState(CREATIVE_STYLES[0]);
   const [aspectRatio, setAspectRatio] = useState(IMAGEN_BRAIN_RATIOS[0]);
   const [mood, setMood] = useState(MOODS[0]);
@@ -97,8 +98,8 @@ const ImageGenerator: React.FC = () => {
     setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
 
     try {
-      // NEW: Call the backend generation service
-      const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages);
+      // NEW: Call the backend generation service with the selected model
+      const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages, model);
       
       // NEW: Update credit balance from the server's response
       setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
@@ -142,7 +143,7 @@ const ImageGenerator: React.FC = () => {
     setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'loading', src: null, error: null } : img));
     
     try {
-        const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, 1);
+        const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, 1, model);
         
         setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
         
@@ -231,7 +232,22 @@ const ImageGenerator: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex flex-col">
+          <label htmlFor="model-select" className="block text-sm font-medium text-gray-400 mb-1">
+            AI Model
+          </label>
+          <select
+            id="model-select"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
+          >
+            {OPEN_ROUTER_MODELS.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </div>
         <Select
           label="Creative Style"
           value={style}
