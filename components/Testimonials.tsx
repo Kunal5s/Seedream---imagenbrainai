@@ -3,7 +3,7 @@ import StarIcon from './ui/StarIcon';
 
 const testimonials = [
   {
-    quote: "Seedream ImagenBrainAi 4.0 has completely transformed my creative process! The quality of the 4K renders is insane and it's so incredibly fast. I can now visualize complex concepts for my clients in minutes instead of hours. The level of detail in the photorealistic outputs is unmatched, making it an indispensable tool for any professional concept artist. It’s not just a generator; it’s a creative partner that consistently exceeds my expectations and pushes my own creative boundaries. I genuinely could not imagine my workflow without it now.",
+    quote: "Seedream ImagenBrainAi has completely transformed my creative process! The quality of the 4K renders is insane and it's so incredibly fast. I can now visualize complex concepts for my clients in minutes instead of hours. The level of detail in the photorealistic outputs is unmatched, making it an indispensable tool for any professional concept artist. It’s not just a generator; it’s a creative partner that consistently exceeds my expectations and pushes my own creative boundaries. I genuinely could not imagine my workflow without it now.",
     name: "Alex Johnson",
     title: "Freelance Concept Artist",
     rating: 5
@@ -33,7 +33,7 @@ const testimonials = [
     rating: 5
   },
   {
-    quote: "Architectural visualization has always been a time-consuming bottleneck in my workflow. Seedream ImagenBrainAi 4.0 changes that completely. I can now generate photorealistic renderings of my concepts in various lighting conditions and material finishes in mere minutes. This is invaluable for client meetings, allowing me to present multiple options and make real-time adjustments based on their feedback. The 'Cinematic Lighting' preset adds a level of drama and realism that truly helps sell a vision. It's an incredible tool for rapid prototyping in architecture.",
+    quote: "Architectural visualization has always been a time-consuming bottleneck in my workflow. Seedream ImagenBrainAi changes that completely. I can now generate photorealistic renderings of my concepts in various lighting conditions and material finishes in mere minutes. This is invaluable for client meetings, allowing me to present multiple options and make real-time adjustments based on their feedback. The 'Cinematic Lighting' preset adds a level of drama and realism that truly helps sell a vision. It's an incredible tool for rapid prototyping in architecture.",
     name: "Fatima Al-Jamil",
     title: "Architectural Designer",
     rating: 5
@@ -63,7 +63,7 @@ const testimonials = [
     rating: 5
   },
   {
-    quote: "Our marketing agency switched to ImagenBrainAi 4.0 for creating ad creatives, and the results have been phenomenal. We can A/B test dozens of visual concepts for our clients' campaigns in the time it used to take to produce just one. The ability to generate hyper-realistic lifestyle images tailored to specific target demographics has significantly boosted our campaign performance and client satisfaction. The ROI is undeniable. It has given us a powerful competitive edge and has become central to our creative strategy. It's the future of advertising.",
+    quote: "Our marketing agency switched to ImagenBrainAi for creating ad creatives, and the results have been phenomenal. We can A/B test dozens of visual concepts for our clients' campaigns in the time it used to take to produce just one. The ability to generate hyper-realistic lifestyle images tailored to specific target demographics has significantly boosted our campaign performance and client satisfaction. The ROI is undeniable. It has given us a powerful competitive edge and has become central to our creative strategy. It's the future of advertising.",
     name: "Tom Sterling",
     title: "Ad Agency Director",
     rating: 5

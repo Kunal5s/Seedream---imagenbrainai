@@ -5,14 +5,14 @@ const PrivacyPolicyPage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="Privacy Policy | Seedream ImagenBrainAi 4.0"
-        description="Read the Privacy Policy for Seedream ImagenBrainAi 4.0. Understand how we collect, use, and protect your data when you use our AI image generation services."
+        title="Privacy Policy | Seedream ImagenBrainAi"
+        description="Read the Privacy Policy for Seedream ImagenBrainAi. Understand how we collect, use, and protect your data when you use our AI image generation services."
         canonicalPath="/privacy-policy"
       />
       <div className="max-w-4xl mx-auto prose prose-invert prose-headings:text-green-300 prose-a:text-green-300">
-        <h1>Privacy Policy for Seedream ImagenBrainAi 4.0</h1>
+        <h1>Privacy Policy for Seedream ImagenBrainAi</h1>
         <p className="text-sm">Last Updated: {new Date().toLocaleDateString()}</p>
-        <p>Seedream Innovations Inc. ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services, Seedream ImagenBrainAi 4.0 (collectively, the "Service"). Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the service.</p>
+        <p>Seedream Innovations Inc. ("we," "us," or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and services, Seedream ImagenBrainAi (collectively, the "Service"). Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the service.</p>
 
         <h2>1. Information We Collect</h2>
         <p>We may collect information about you in a variety of ways. The information we may collect via the Service includes:</p>

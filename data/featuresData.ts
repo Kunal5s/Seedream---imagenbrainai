@@ -2,7 +2,7 @@
 export const featuresData = [
   {
     title: 'Unleash Creativity with the Premier AI Image Generator',
-    description: `Step into a world where words become visual masterpieces. The core **Seedream ImagenBrainAi generator** is more than a tool; it’s your creative co-pilot. Built on our 4.0 architecture, it translates complex prompts into stunning images with breathtaking speed. Whether you're a professional artist or a storyteller visualizing a new world, our generator offers the ultimate canvas. Experience an AI that understands nuance and style, delivering unparalleled quality and turning your wildest creative impulses into tangible, awe-inspiring art. Your imagination is now the only limit.`
+    description: `Step into a world where words become visual masterpieces. The core **Seedream ImagenBrainAi generator** is more than a tool; it’s your creative co-pilot. Built on our advanced architecture, it translates complex prompts into stunning images with breathtaking speed. Whether you're a professional artist or a storyteller visualizing a new world, our generator offers the ultimate canvas. Experience an AI that understands nuance and style, delivering unparalleled quality and turning your wildest creative impulses into tangible, awe-inspiring art. Your imagination is now the only limit.`
   },
   {
     title: 'Access Your Digital Art Studio Anytime, Anywhere Online',
@@ -26,7 +26,7 @@ export const featuresData = [
   },
   {
     title: 'Experience the Future of AI Art with a Free Trial',
-    description: `Curiosity shouldn't come with a price tag. We invite you to explore the full potential of our platform with the **Seedream ImagenBrainAi free trial**. This isn’t a limited demo; it’s an opportunity to experience the speed, quality, and creative freedom of our 4.0 engine firsthand. Generate images, experiment with styles, and see for yourself how our tool can transform your workflow. We're confident that once you see what’s possible, you’ll be ready to unlock your full creative potential with one of our premium plans.`
+    description: `Curiosity shouldn't come with a price tag. We invite you to explore the full potential of our platform with the **Seedream ImagenBrainAi free trial**. This isn’t a limited demo; it’s an opportunity to experience the speed, quality, and creative freedom of our engine firsthand. Generate images, experiment with styles, and see for yourself how our tool can transform your workflow. We're confident that once you see what’s possible, you’ll be ready to unlock your full creative potential with one of our premium plans.`
   },
   {
     title: 'Witness Blazing-Fast Generations with High-Speed AI Rendering',

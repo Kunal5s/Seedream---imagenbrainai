@@ -6,8 +6,8 @@ const FeaturesPage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="Features Deep Dive | Seedream ImagenBrainAi 4.0"
-        description="Explore the complete suite of powerful features in Seedream ImagenBrainAi 4.0. From 4K cinematic scenes and realistic portraits to advanced AI editing tools for professionals."
+        title="Features Deep Dive | Seedream ImagenBrainAi"
+        description="Explore the complete suite of powerful features in Seedream ImagenBrainAi. From 4K cinematic scenes and realistic portraits to advanced AI editing tools for professionals."
         canonicalPath="/features"
       />
       <div className="max-w-4xl mx-auto">
@@ -18,7 +18,7 @@ const FeaturesPage: React.FC = () => {
                 </span>
             </h1>
             <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
-                Discover the advanced capabilities that make Seedream ImagenBrainAi 4.0 the ultimate platform for digital artists, designers, and creators.
+                Discover the advanced capabilities that make Seedream ImagenBrainAi the ultimate platform for digital artists, designers, and creators.
             </p>
         </div>
 

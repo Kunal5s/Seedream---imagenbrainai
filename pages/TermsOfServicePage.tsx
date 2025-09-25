@@ -5,21 +5,21 @@ const TermsOfServicePage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="Terms of Service | Seedream ImagenBrainAi 4.0"
-        description="Review the Terms of Service for Seedream ImagenBrainAi 4.0. Learn about your rights and responsibilities when using our AI image generation platform."
+        title="Terms of Service | Seedream ImagenBrainAi"
+        description="Review the Terms of Service for Seedream ImagenBrainAi. Learn about your rights and responsibilities when using our AI image generation platform."
         canonicalPath="/terms-of-service"
       />
       <div className="max-w-4xl mx-auto prose prose-invert prose-headings:text-green-300 prose-a:text-green-300">
         <h1>Terms of Service</h1>
         <p className="text-sm">Last Updated: {new Date().toLocaleDateString()}</p>
-        <p>Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the Seedream ImagenBrainAi 4.0 website and services (the "Service") operated by Seedream Innovations Inc. ("us", "we", or "our").</p>
+        <p>Please read these Terms of Service ("Terms", "Terms of Service") carefully before using the Seedream ImagenBrainAi website and services (the "Service") operated by Seedream Innovations Inc. ("us", "we", or "our").</p>
         <p>Your access to and use of the Service is conditioned upon your acceptance of and compliance with these Terms. These Terms apply to all visitors, users, and others who wish to access or use the Service. By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of the terms, then you do not have permission to access the Service.</p>
 
         <h2>1. Accounts</h2>
         <p>When you create an account with us, you guarantee that you are above the age of 13, and that the information you provide us is accurate, complete, and current at all times. Inaccurate, incomplete, or obsolete information may result in the immediate termination of your account on the Service.</p>
         
         <h3>1.1 Account Security</h3>
-        <p>You are responsible for maintaining the confidentiality of your account and password, including but not limited to the restriction of access to your computer and/or account. You agree to accept responsibility for any and all activities or actions that occur under your account and/or password.</p>
+        <p>You are responsible for maintaining the confidentiality of your account and password, including but not to the restriction of access to your computer and/or account. You agree to accept responsibility for any and all activities or actions that occur under your account and/or password.</p>
 
         <h2>2. User Content</h2>
         <p>Our Service allows you to post, link, store, share and otherwise make available certain information, text, graphics, videos, or other material ("User Content"). You are responsible for the User Content that you post on or through the Service, including its legality, reliability, and appropriateness.</p>
@@ -48,7 +48,7 @@ const TermsOfServicePage: React.FC = () => {
         <p>The Service and its original content (excluding User Content), features and functionality are and will remain the exclusive property of Seedream Innovations Inc. and its licensors. The Service is protected by copyright, trademark, and other laws of both the United States and foreign countries.</p>
 
         <h2>5. Termination</h2>
-        <p>We may terminate or suspend your account and bar access to the Service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever and without limitation, including but not limited to a breach of the Terms.</p>
+        <p>We may terminate or suspend your account and bar access to the Service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever and without limitation, including but not to a breach of the Terms.</p>
 
         <h2>6. Limitation of Liability</h2>
         <p>In no event shall Seedream Innovations Inc., nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.</p>

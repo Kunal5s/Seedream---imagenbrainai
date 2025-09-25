@@ -5,19 +5,19 @@ const AboutPage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="About Us | Seedream ImagenBrainAi 4.0"
-        description="Learn about the mission, technology, and team behind Seedream ImagenBrainAi 4.0, the next-generation platform for AI-driven creativity and visual arts."
+        title="About Us | Seedream ImagenBrainAi"
+        description="Learn about the mission, technology, and team behind Seedream ImagenBrainAi, the next-generation platform for AI-driven creativity and visual arts."
         canonicalPath="/about"
       />
       <div className="max-w-4xl mx-auto prose prose-invert prose-headings:text-green-300 prose-a:text-green-300">
-        <h1>About Seedream ImagenBrainAi 4.0</h1>
-        <p className="text-xl">Welcome to the future of digital artistry. Seedream ImagenBrainAi 4.0 is not just a tool; it's a creative partner designed to bring your most ambitious visions to life. Our journey began with a simple yet profound idea: to democratize creativity and empower everyone, from professional artists to casual hobbyists, with the ability to create stunning, high-quality visuals effortlessly.</p>
+        <h1>About Seedream ImagenBrainAi</h1>
+        <p className="text-xl">Welcome to the future of digital artistry. Seedream ImagenBrainAi is not just a tool; it's a creative partner designed to bring your most ambitious visions to life. Our journey began with a simple yet profound idea: to democratize creativity and empower everyone, from professional artists to casual hobbyists, with the ability to create stunning, high-quality visuals effortlessly.</p>
 
         <h2>Our Mission</h2>
-        <p>Our core mission is to push the boundaries of artificial intelligence in the realm of visual arts. We aim to build the most intuitive, powerful, and versatile AI image generation platform on the market. We believe that technology should serve as a bridge between imagination and reality, and ImagenBrainAi 4.0 is the embodiment of that philosophy. We are committed to continuous innovation, ensuring our users always have access to the latest advancements in AI-driven creativity.</p>
+        <p>Our core mission is to push the boundaries of artificial intelligence in the realm of visual arts. We aim to build the most intuitive, powerful, and versatile AI image generation platform on the market. We believe that technology should serve as a bridge between imagination and reality, and ImagenBrainAi is the embodiment of that philosophy. We are committed to continuous innovation, ensuring our users always have access to the latest advancements in AI-driven creativity.</p>
 
         <h3>The Technology Behind the Magic</h3>
-        <p>Seedream ImagenBrainAi 4.0 is powered by a state-of-the-art generative model, meticulously trained on a diverse and extensive dataset of art and images. This allows our AI to understand a vast range of concepts, styles, and nuances.</p>
+        <p>Seedream ImagenBrainAi is powered by a state-of-the-art generative model, meticulously trained on a diverse and extensive dataset of art and images. This allows our AI to understand a vast range of concepts, styles, and nuances.</p>
         <h4>Key Technological Pillars:</h4>
         <ul>
           <li><strong>Advanced Diffusion Models:</strong> At our core, we utilize cutting-edge diffusion models that can generate images from text prompts with incredible detail and coherence.</li>
@@ -26,7 +26,7 @@ const AboutPage: React.FC = () => {
         </ul>
 
         <h2>Our Story</h2>
-        <p>Founded by a team of passionate AI researchers, software engineers, and digital artists, Seedream was born out of a shared frustration with the limitations of existing creative tools. We saw an opportunity to create something truly revolutionary. The development of ImagenBrainAi 4.0 has been a labor of love, involving years of research, countless experiments, and an unwavering dedication to quality. We started in a small garage, fueled by coffee and a dream, and have grown into a global team united by a single goal: to build the ultimate creative tool.</p>
+        <p>Founded by a team of passionate AI researchers, software engineers, and digital artists, Seedream was born out of a shared frustration with the limitations of existing creative tools. We saw an opportunity to create something truly revolutionary. The development of ImagenBrainAi has been a labor of love, involving years of research, countless experiments, and an unwavering dedication to quality. We started in a small garage, fueled by coffee and a dream, and have grown into a global team united by a single goal: to build the ultimate creative tool.</p>
 
         <h3>Meet the Team</h3>
         <p>While we operate with a startup's agility, our team comprises industry veterans from leading tech companies and creative studios. We are a diverse group of thinkers and doers who believe in the power of collaboration.</p>
@@ -47,7 +47,7 @@ const AboutPage: React.FC = () => {
         </ul>
 
         <h2>Join Our Community</h2>
-        <p>Seedream ImagenBrainAi 4.0 is more than a product; it's a thriving community of creators. We invite you to join us on this exciting journey. Share your creations, learn from others, and be a part of the revolution in digital art. Follow us on our social media channels and join our Discord server to connect with fellow artists and the development team. The future of AI art is not just something we're building; it's something we're building together. Thank you for being a part of our story.</p>
+        <p>Seedream ImagenBrainAi is more than a product; it's a thriving community of creators. We invite you to join us on this exciting journey. Share your creations, learn from others, and be a part of the revolution in digital art. Follow us on our social media channels and join our Discord server to connect with fellow artists and the development team. The future of AI art is not just something we're building; it's something we're building together. Thank you for being a part of our story.</p>
       </div>
     </>
   );

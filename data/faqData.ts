@@ -5,7 +5,7 @@ interface FaqItem {
 
 export const faqData: FaqItem[] = [
   {
-    question: "What is Seedream ImagenBrainAi 4.0?",
+    question: "What is Seedream ImagenBrainAi?",
     answer: "It's a next-generation AI image generator that transforms your text descriptions into ultra-realistic, 4K quality visuals using state-of-the-art artificial intelligence.",
   },
   {

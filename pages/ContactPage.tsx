@@ -5,13 +5,13 @@ const ContactPage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="Contact Us | Seedream ImagenBrainAi 4.0"
-        description="Contact the Seedream ImagenBrainAi 4.0 team for support, partnership inquiries, or press questions. We're here to help you on your creative journey."
+        title="Contact Us | Seedream ImagenBrainAi"
+        description="Contact the Seedream ImagenBrainAi team for support, partnership inquiries, or press questions. We're here to help you on your creative journey."
         canonicalPath="/contact"
       />
       <div className="max-w-4xl mx-auto prose prose-invert prose-headings:text-green-300 prose-a:text-green-300">
         <h1>Contact Us</h1>
-        <p className="text-xl">We're here to help and eager to hear from you! Whether you have a question about our features, a suggestion for improvement, a press inquiry, or just want to share your amazing creations, this is the place to do it. Your feedback is invaluable to us as we continue to build and refine Seedream ImagenBrainAi 4.0.</p>
+        <p className="text-xl">We're here to help and eager to hear from you! Whether you have a question about our features, a suggestion for improvement, a press inquiry, or just want to share your amazing creations, this is the place to do it. Your feedback is invaluable to us as we continue to build and refine Seedream ImagenBrainAi.</p>
 
         <h2>General Inquiries</h2>
         <p>For most questions, the quickest way to get an answer is to check our comprehensive FAQ section. If you can't find what you're looking for, please don't hesitate to reach out to our general support team. We aim to respond to all inquiries within 24-48 hours.</p>
@@ -31,7 +31,7 @@ const ContactPage: React.FC = () => {
         <h4>API & Developer Support</h4>
         <p>If you are a developer using our API and have questions about integration, documentation, or endpoints, our developer relations team is here for you. We provide dedicated support to help you build amazing applications on top of our platform.</p>
         <h5>Integration Questions</h5>
-        <p>For questions regarding SDKs, authentication, and best practices for integrating ImagenBrainAi 4.0 into your product.</p>
+        <p>For questions regarding SDKs, authentication, and best practices for integrating ImagenBrainAi into your product.</p>
         <h6>Bug Reports</h6>
         <p>To report a bug or unexpected behavior in the API, please provide the request body, endpoint, and the response you received.</p>
         <p><strong>Email:</strong> <a href="mailto:developers@seedream.dev">developers@seedream.dev</a></p>
@@ -60,7 +60,7 @@ const ContactPage: React.FC = () => {
           <li><strong>Instagram:</strong> @Seedream.AI</li>
           <li><strong>Discord:</strong> <a href="#">discord.gg/seedream</a></li>
         </ul>
-        <p>We look forward to hearing from you and seeing the incredible things you create with Seedream ImagenBrainAi 4.0!</p>
+        <p>We look forward to hearing from you and seeing the incredible things you create with Seedream ImagenBrainAi!</p>
       </div>
     </>
   );

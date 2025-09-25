@@ -14,8 +14,8 @@ const FaqPage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="FAQ | Seedream ImagenBrainAi 4.0"
-        description="Find answers to frequently asked questions about Seedream ImagenBrainAi 4.0, including usage rights, plans, features, and how to get started."
+        title="FAQ | Seedream ImagenBrainAi"
+        description="Find answers to frequently asked questions about Seedream ImagenBrainAi, including usage rights, plans, features, and how to get started."
         canonicalPath="/faq"
       />
       <div className="max-w-4xl mx-auto">

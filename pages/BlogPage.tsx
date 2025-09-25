@@ -97,8 +97,8 @@ const BlogPage: React.FC = () => {
   return (
     <>
       <MetaTags
-        title="Seedream Imagenbrainai Feed | Seedream ImagenBrainAi 4.0"
-        description="Explore articles, insights, and guides on leveraging the power of AI art with Seedream ImagenBrainAi 4.0. Stay updated on new features, tips, and creative inspiration."
+        title="Seedream Imagenbrainai Feed | Seedream ImagenBrainAi"
+        description="Explore articles, insights, and guides on leveraging the power of AI art with Seedream ImagenBrainAi. Stay updated on new features, tips, and creative inspiration."
         canonicalPath="/blog"
       />
       <div className="max-w-6xl mx-auto">
