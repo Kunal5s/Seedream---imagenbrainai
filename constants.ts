@@ -40,12 +40,12 @@ export const CREATIVE_STYLES: string[] = [
   'Double Exposure'
 ];
 
-export const IMAGEN_BRAIN_RATIOS: { name: string; aspectRatio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9"; className: string }[] = [
-  { name: 'Square (1:1)', aspectRatio: '1:1', className: 'aspect-square' },
-  { name: 'Portrait (3:4)', aspectRatio: '3:4', className: 'aspect-[3/4]' },
-  { name: 'Landscape (4:3)', aspectRatio: '4:3', className: 'aspect-[4/3]' },
-  { name: 'Tall (9:16)', aspectRatio: '9:16', className: 'aspect-[9/16]' },
-  { name: 'Wide (16:9)', aspectRatio: '16:9', className: 'aspect-[16/9]' },
+export const IMAGEN_BRAIN_RATIOS: { name: string; aspectRatio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9"; className: string; width: number; height: number; }[] = [
+  { name: 'Square (1:1)', aspectRatio: '1:1', className: 'aspect-square', width: 1024, height: 1024 },
+  { name: 'Portrait (3:4)', aspectRatio: '3:4', className: 'aspect-[3/4]', width: 768, height: 1024 },
+  { name: 'Landscape (4:3)', aspectRatio: '4:3', className: 'aspect-[4/3]', width: 1024, height: 768 },
+  { name: 'Tall (9:16)', aspectRatio: '9:16', className: 'aspect-[9/16]', width: 576, height: 1024 },
+  { name: 'Wide (16:9)', aspectRatio: '16:9', className: 'aspect-[16/9]', width: 1344, height: 768 },
 ];
 
 export const MOODS: string[] = [

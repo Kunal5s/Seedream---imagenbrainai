@@ -69,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             licenses: newLicenses,
         };
 
-        transaction.update(userRef, newStatus);
+        transaction.update(userRef, { ...newStatus });
         transaction.set(licensesRef.doc(key), { usedBy: MOCK_USER_ID, activationDate: new Date() });
         
         return newStatus;

@@ -4,22 +4,10 @@ import { db } from '../../services/firebase';
 import { uploadImageToR2 } from '../../services/r2';
 import { PLAN_DETAILS, Plan } from '../../config/plans';
 import { UserStatus } from '../../services/licenseService';
+import { IMAGEN_BRAIN_RATIOS } from '../../constants';
 
 // MOCK: In a real app, you'd get this from a session cookie or JWT
 const MOCK_USER_ID = 'user_demo_123';
-
-const getDimensions = (aspectRatioString: string): { width: number, height: number } => {
-    const baseSize = 1024;
-    const ratioName = aspectRatioString.match(/^(.*?)\s/)?.[1] || 'Square';
-    switch (ratioName) {
-        case 'Square': return { width: baseSize, height: baseSize };
-        case 'Portrait': return { width: 768, height: baseSize };
-        case 'Landscape': return { width: baseSize, height: 768 };
-        case 'Tall': return { width: 576, height: baseSize };
-        case 'Wide': return { width: 1344, height: 768 }; // Use a common wide format
-        default: return { width: baseSize, height: baseSize };
-    }
-};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -45,69 +33,111 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userRef = db.collection('users').doc(MOCK_USER_ID);
   
   try {
-    const generatedUrls: string[] = [];
-    let finalCredits = 0;
+    // Step 1: Pre-flight check for user and credits (outside transaction)
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      throw new Error('User not found.');
+    }
 
-    await db.runTransaction(async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists) {
-          throw new Error('User not found.');
-        }
+    const userData = userDoc.data() as UserStatus;
+    const plan: Plan = Object.values(PLAN_DETAILS).find(p => p.name === userData.plan) || PLAN_DETAILS['FREE_TRIAL'];
+    const creditsPerImage = plan.creditsPerImage;
+    const totalCreditsNeeded = numberOfImages * creditsPerImage;
 
-        const userData = userDoc.data() as UserStatus;
-        const plan: Plan = Object.values(PLAN_DETAILS).find(p => p.name === userData.plan) || PLAN_DETAILS['FREE_TRIAL'];
-        const creditsPerImage = plan.creditsPerImage;
-        const totalCreditsNeeded = numberOfImages * creditsPerImage;
-        
-        if (userData.credits < totalCreditsNeeded) {
-          throw new Error(`Not enough credits. You need ${totalCreditsNeeded} but only have ${userData.credits}.`);
-        }
-        
-        const fullPrompt = `${prompt}, ${style}, ${mood} mood, ${lighting} lighting, ${color} color scheme, --no ${negativePrompt || 'text, watermark'}`;
-        const dims = getDimensions(aspectRatio);
+    if (userData.credits < totalCreditsNeeded) {
+      // Use 402 Payment Required for insufficient funds
+      return res.status(402).json({ message: `Not enough credits. You need ${totalCreditsNeeded} but only have ${userData.credits}.` });
+    }
+    
+    // Step 2: Create an array of image generation promises to run in parallel for maximum speed
+    const generationPromises = Array.from({ length: numberOfImages }).map(async () => {
+        const fullPrompt = `${prompt}, ${style} style, ${mood}, ${lighting}, ${color} theme, --no ${negativePrompt || 'text, watermark'}`;
+        const ratioDetails = IMAGEN_BRAIN_RATIOS.find(r => r.name === aspectRatio) || IMAGEN_BRAIN_RATIOS[0];
 
-        const imagePromises = Array.from({ length: numberOfImages }).map(async () => {
-          const seed = Math.floor(Math.random() * 100000);
-          const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${dims.width}&height=${dims.height}&seed=${seed}`;
-          
-          const imageResponse = await fetch(url);
-          if (!imageResponse.ok) {
-            throw new Error(`Pollinations API failed with status: ${imageResponse.statusText}`);
-          }
-          
-          const imageBuffer = await imageResponse.arrayBuffer();
-          const base64Image = Buffer.from(imageBuffer).toString('base64');
-          
-          const r2Url = await uploadImageToR2(base64Image, MOCK_USER_ID);
-          
-          // Save to history
-          const historyRef = userRef.collection('imageHistory').doc();
-          transaction.set(historyRef, { url: r2Url, prompt, createdAt: new Date().toISOString() });
-          
-          return r2Url;
+        const pollResponse = await fetch('https://api.pollinations.ai/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: fullPrompt,
+                width: ratioDetails.width,
+                height: ratioDetails.height,
+                watermark: false
+            })
         });
 
-        const urls = await Promise.all(imagePromises);
-        generatedUrls.push(...urls);
+        if (!pollResponse.ok) {
+            const errorBody = await pollResponse.text().catch(() => 'Could not read error body.');
+            console.error(`Pollinations API returned an error. Status: ${pollResponse.status}. Body: ${errorBody}`);
+            throw new Error(`Image provider failed with status: ${pollResponse.statusText}`);
+        }
+        
+        const responseData = await pollResponse.json();
+        const imageUrl = responseData?.image_url;
 
-        // Deduct credits
-        finalCredits = userData.credits - totalCreditsNeeded;
+        if (!imageUrl) {
+            console.error('Pollinations API did not return an image_url.', responseData);
+            throw new Error('Image provider did not return a valid image URL.');
+        }
+
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+            throw new Error(`Failed to fetch the generated image from URL: ${imageResponse.statusText}`);
+        }
+        
+        const contentType = imageResponse.headers.get('content-type');
+        if (!contentType || !contentType.startsWith('image/')) {
+            throw new Error('Image provider returned an invalid content type. The service may be temporarily down.');
+        }
+        
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        const r2Url = await uploadImageToR2(base64Image, MOCK_USER_ID);
+        
+        return {
+            url: r2Url,
+            prompt,
+            createdAt: new Date().toISOString()
+        };
+    });
+    
+    // Execute all promises concurrently
+    const generatedImagesData = await Promise.all(generationPromises);
+
+    // Step 3: Write to database in a single, short-lived transaction
+    let finalCredits = 0;
+    await db.runTransaction(async (transaction) => {
+        const freshUserDoc = await transaction.get(userRef);
+        if (!freshUserDoc.exists) {
+            throw new Error('User not found during transaction.');
+        }
+        const currentData = freshUserDoc.data() as UserStatus;
+
+        if (currentData.credits < totalCreditsNeeded) {
+            throw new Error('User credits changed during generation; aborting to prevent overdraft.');
+        }
+
+        finalCredits = currentData.credits - totalCreditsNeeded;
         transaction.update(userRef, { credits: finalCredits });
+
+        for (const imageData of generatedImagesData) {
+            const historyRef = userRef.collection('imageHistory').doc();
+            transaction.set(historyRef, imageData);
+        }
     });
     
     res.status(200).json({ 
-        imageUrls: generatedUrls,
+        imageUrls: generatedImagesData.map(d => d.url),
         credits: finalCredits 
     });
 
   } catch (error) {
     console.error("Image generation error:", error);
-    // Attempt to refund credits on failure by just returning current credit balance
+    // On failure, return the current credit balance without making changes.
     const userDoc = await userRef.get();
-    if (userDoc.exists) {
-        res.status(500).json({ message: error instanceof Error ? error.message : "An unknown error occurred.", credits: userDoc.data()?.credits });
-    } else {
-        res.status(500).json({ message: error instanceof Error ? error.message : "An unknown error occurred." });
-    }
+    const currentCredits = userDoc.exists ? userDoc.data()?.credits : 0;
+    res.status(500).json({ 
+        message: error instanceof Error ? error.message : "An unknown error occurred during image generation.",
+        credits: currentCredits 
+    });
   }
 }

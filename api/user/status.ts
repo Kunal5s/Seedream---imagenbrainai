@@ -1,7 +1,7 @@
 // api/user/status.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../../services/firebase';
-import { UserStatus, PlanName, createGuestStatus } from '../../services/licenseService';
+import { UserStatus, createGuestStatus } from '../../services/licenseService';
 
 // MOCK: In a real app, you'd get this from a session cookie or JWT
 const MOCK_USER_ID = 'user_demo_123'; 
