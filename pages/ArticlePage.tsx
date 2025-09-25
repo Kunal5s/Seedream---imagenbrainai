@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-// FIX: Use namespace import for react-router-dom to fix module resolution issues.
-import * as ReactRouterDom from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import MetaTags from '../components/MetaTags';
 import { BlogPost } from '../data/blogData';
 import { getArticleBySlug } from '../data/blogData';
@@ -8,7 +7,7 @@ import Spinner from '../components/ui/Spinner';
 import AuthorBio from '../components/AuthorBio';
 
 const ArticlePage: React.FC = () => {
-  const { slug } = ReactRouterDom.useParams<{ slug: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [article, setArticle] = useState<BlogPost | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   
@@ -29,6 +28,10 @@ const ArticlePage: React.FC = () => {
 
   const contentWithoutFirstImage = useMemo(() => {
     if (!article?.content) return '';
+    // This logic should only run in the browser, not during a server-side build.
+    if (typeof window === 'undefined') {
+        return article.content;
+    }
     // Use the browser's DOM parser to safely manipulate the HTML string
     // This prevents the featured image from appearing a second time inside the article body.
     try {
@@ -59,7 +62,7 @@ const ArticlePage: React.FC = () => {
      <div className="text-center text-red-400 py-20 bg-red-900/20 rounded-lg max-w-4xl mx-auto">
        <h2 className="text-2xl font-bold mb-2">Error Loading Article Data</h2>
        <p>{error}</p>
-       <ReactRouterDom.Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors mt-4 inline-block">&larr; Back to Blog</ReactRouterDom.Link>
+       <Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors mt-4 inline-block">&larr; Back to Blog</Link>
      </div>
    );
   }
@@ -69,12 +72,11 @@ const ArticlePage: React.FC = () => {
       <div className="text-center bg-yellow-900/20 text-yellow-300 p-6 rounded-lg max-w-4xl mx-auto" role="alert">
         <h2 className="text-2xl font-bold mb-2">404 - Article Not Found</h2>
         <p>The requested article could not be found.</p>
-        <ReactRouterDom.Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors mt-4 inline-block">&larr; Back to Blog</ReactRouterDom.Link>
+        <Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors mt-4 inline-block">&larr; Back to Blog</Link>
       </div>
     );
   }
   
-  // FIX: Simplified author handling. The service now guarantees author is always a full object.
   const author = article.author;
 
   return (
@@ -86,7 +88,7 @@ const ArticlePage: React.FC = () => {
       />
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-            <ReactRouterDom.Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors font-semibold">&larr; Back to All Articles</ReactRouterDom.Link>
+            <Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors font-semibold">&larr; Back to All Articles</Link>
         </div>
         
         <article>

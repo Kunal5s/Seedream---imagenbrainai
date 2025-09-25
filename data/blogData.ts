@@ -37,6 +37,12 @@ const enhanceBloggerThumbnail = (url: string | null): string | null => {
 
 const cleanTextForClient = (html: string): string => {
     if (!html) return '';
+    // This logic should only run in the browser, not during a server-side build.
+    if (typeof window === 'undefined') {
+        let text = html.replace(/<[^>]*>/g, '');
+        text = text.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        return text.replace(/[\s\u00A0]+/g, ' ').trim();
+    }
     try {
         const tempEl = document.createElement('div');
         tempEl.innerHTML = html;

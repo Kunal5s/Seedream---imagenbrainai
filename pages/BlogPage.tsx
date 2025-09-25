@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// FIX: Use namespace import for react-router-dom to fix module resolution issues.
-import * as ReactRouterDom from 'react-router-dom';
 import MetaTags from '../components/MetaTags';
 import { motion, Variants } from 'framer-motion';
 import { BlogPost } from '../data/blogData';

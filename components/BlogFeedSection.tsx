@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import * as ReactRouterDom from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BlogPost } from '../data/blogData';
 import { getArticles } from '../data/blogData';
 import Spinner from './ui/Spinner';
@@ -61,12 +61,12 @@ const BlogFeedSection: React.FC = () => {
           ))}
         </div>
         <div className="text-center mt-12">
-            <ReactRouterDom.Link
+            <Link
               to="/blog"
               className="bg-gray-800 text-green-300 font-bold py-3 px-8 rounded-lg border border-green-400/30 transition-all duration-300 ease-in-out transform hover:bg-green-400/10 hover:shadow-lg hover:shadow-green-400/20 focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-opacity-50"
             >
               View All Posts
-            </ReactRouterDom.Link>
+            </Link>
         </div>
       </>
     );

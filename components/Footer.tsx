@@ -1,7 +1,6 @@
 
 import React from 'react';
-// FIX: Use namespace import for react-router-dom to fix module resolution issues.
-import * as ReactRouterDom from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import FooterBlogFeed from './FooterBlogFeed';
 
 const Footer: React.FC = () => {
@@ -28,10 +27,10 @@ const Footer: React.FC = () => {
           {/* Column 1: About */}
           <div>
             <h3 className="text-xl font-bold mb-4">
-              <ReactRouterDom.Link to="/" className="hover:opacity-80 transition-opacity">
+              <Link to="/" className="hover:opacity-80 transition-opacity">
                  <span className="text-green-300">Seedream</span>
                  <span className="text-gray-300"> ImagenBrainAi</span>
-              </ReactRouterDom.Link>
+              </Link>
             </h3>
             <p className="text-gray-400 text-sm">
               A next-generation creative suite designed to empower artists, designers, and innovators by transforming imagination into stunning visual reality. We are dedicated to pushing the boundaries of AI art.
@@ -44,9 +43,9 @@ const Footer: React.FC = () => {
             <ul className="space-y-2">
               {quickLinks.map(link => (
                 <li key={link.path}>
-                  <ReactRouterDom.Link to={link.path} className="text-gray-400 hover:text-green-300 transition-colors">
+                  <Link to={link.path} className="text-gray-400 hover:text-green-300 transition-colors">
                     {link.name}
-                  </ReactRouterDom.Link>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -58,9 +57,9 @@ const Footer: React.FC = () => {
              <ul className="space-y-2">
                {resourceLinks.map(link => (
                 <li key={link.path}>
-                  <ReactRouterDom.Link to={link.path} className="text-gray-400 hover:text-green-300 transition-colors">
+                  <Link to={link.path} className="text-gray-400 hover:text-green-300 transition-colors">
                     {link.name}
-                  </ReactRouterDom.Link>
+                  </Link>
                 </li>
               ))}
              </ul>

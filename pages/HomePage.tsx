@@ -2,8 +2,6 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-// FIX: Use namespace import for react-router-dom to fix module resolution issues.
-import * as ReactRouterDom from 'react-router-dom';
 import GeneratorSuite from '../components/GeneratorSuite';
 import WhyChooseUs from '../components/WhyChooseUs';
 import MetaTags from '../components/MetaTags';

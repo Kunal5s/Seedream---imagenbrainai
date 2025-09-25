@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// FIX: Use namespace import for react-router-dom to fix module resolution issues.
-import * as ReactRouterDom from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BlogPost } from '../data/blogData';
 import { getArticles } from '../data/blogData';
 
@@ -33,15 +32,15 @@ const FooterBlogFeed: React.FC = () => {
         <ul className="space-y-3">
           {posts.map(post => (
             <li key={post.slug}>
-              <ReactRouterDom.Link to={`/blog/${post.slug}`} className="text-gray-400 hover:text-green-300 transition-colors text-sm leading-snug block">
+              <Link to={`/blog/${post.slug}`} className="text-gray-400 hover:text-green-300 transition-colors text-sm leading-snug block">
                 {post.title}
-              </ReactRouterDom.Link>
+              </Link>
             </li>
           ))}
           <li>
-            <ReactRouterDom.Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors text-sm font-semibold mt-2 block">
+            <Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors text-sm font-semibold mt-2 block">
               View All Posts &rarr;
-            </ReactRouterDom.Link>
+            </Link>
           </li>
         </ul>
       );

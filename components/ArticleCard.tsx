@@ -1,5 +1,5 @@
 import React from 'react';
-import * as ReactRouterDom from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BlogPost } from '../data/blogData';
 
@@ -22,7 +22,7 @@ const cardVariants = {
 const ArticleCard: React.FC<ArticleCardProps> = ({ post }) => {
   return (
     <motion.div variants={cardVariants}>
-      <ReactRouterDom.Link
+      <Link
         to={`/blog/${post.slug}`}
         className="block h-full bg-gray-900 border border-green-400/20 rounded-lg overflow-hidden transform hover:scale-105 hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-green-400/20 flex flex-col group"
       >
@@ -46,7 +46,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ post }) => {
             Read More &rarr;
           </span>
         </div>
-      </ReactRouterDom.Link>
+      </Link>
     </motion.div>
   );
 };
