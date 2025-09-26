@@ -11,19 +11,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
   try {
-    // Fetch only the user's private images, which constitute their active history
     const historyCollectionRef = db.collection('images');
     const snapshot = await historyCollectionRef
         .where('userId', '==', MOCK_USER_ID)
-        .where('marketplaceStatus', '==', 'private')
-        .orderBy('createdAt', 'desc')
         .get();
 
     if (snapshot.empty) {
       return res.status(200).json([]);
     }
 
-    const history: ImageRecord[] = snapshot.docs.map(doc => {
+    const allUserImages: ImageRecord[] = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -33,12 +30,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         width: data.width,
         height: data.height,
         createdAt: data.createdAt,
+        marketplaceStatus: data.marketplaceStatus,
         price: data.price,
         purchaseLink: data.purchaseLink,
       };
     });
-    
-    res.status(200).json(history);
+
+    const privateHistory = allUserImages
+        .filter(item => item.marketplaceStatus === 'private')
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.status(200).json(privateHistory);
 
   } catch (error) {
     console.error('Error fetching image history:', error);

@@ -38,7 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       height: height,
       createdAt: now.toISOString(),
       userId: MOCK_USER_ID,
-      marketplaceStatus: 'private',
+      // FIX: Explicitly cast `marketplaceStatus` to the literal type `'private' as const` to satisfy the `ImageRecord` type requirement. This prevents TypeScript from widening the type to `string`, resolving the type incompatibility error when creating the `savedRecord` object.
+      marketplaceStatus: 'private' as const,
       price: null,
       purchaseLink: null,
     };
@@ -47,15 +48,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // --- New Marketplace Logic ---
     const imagesRef = db.collection('images');
-    const userPrivateImagesQuery = imagesRef
+    const userImagesSnapshot = await imagesRef
         .where('userId', '==', MOCK_USER_ID)
-        .where('marketplaceStatus', '==', 'private')
-        .orderBy('createdAt', 'asc'); // Oldest first
+        .get();
+        
+    const privateImages = userImagesSnapshot.docs
+        .filter(doc => doc.data().marketplaceStatus === 'private')
+        .sort((a, b) => new Date(a.data().createdAt).getTime() - new Date(b.data().createdAt).getTime()); // oldest first
 
-    const snapshot = await userPrivateImagesQuery.get();
-
-    if (snapshot.size > HISTORY_LIMIT) {
-        const oldestDoc = snapshot.docs[0];
+    if (privateImages.length > HISTORY_LIMIT) {
+        const oldestDoc = privateImages[0];
         await oldestDoc.ref.update({
             marketplaceStatus: 'live',
             price: getRandomPrice(),

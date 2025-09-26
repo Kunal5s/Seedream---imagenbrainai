@@ -14,6 +14,7 @@ export interface ImageRecord {
   expiresAt?: string; // No longer used but kept for type safety
   price?: number; // Price on the marketplace
   purchaseLink?: string; // Link to buy the image
+  marketplaceStatus?: 'private' | 'live';
 }
 
 // A generic helper function to handle fetch requests and standardized error handling.
@@ -29,7 +30,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.message || `API Error: ${response.statusText}`);
+      throw new Error(errorData?.message || `API Error:`);
     }
 
     if (response.status === 204) { // Handle "No Content" responses
