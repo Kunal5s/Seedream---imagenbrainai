@@ -11,6 +11,13 @@ export interface ImageHistoryItem {
   createdAt: string;
 }
 
+// Define the new types for the robust generation response
+export type GenerationResult = { status: 'success'; url: string; } | { status: 'error'; message: string; };
+export interface GenerationResponse {
+    results: GenerationResult[];
+    credits: number;
+}
+
 // A generic helper function to handle fetch requests and standardized error handling.
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   try {
@@ -64,7 +71,7 @@ export const apiActivateLicense = (email: string, key: string): Promise<UserStat
 /**
  * Sends a comprehensive generation request to the backend.
  * The backend handles the AI call, R2 upload, and credit deduction.
- * @returns An object containing the new R2 image URLs and the user's updated credit balance.
+ * @returns An object containing the results of each generation attempt and the user's updated credit balance.
  */
 export const apiGenerateImages = (
     prompt: string, 
@@ -76,8 +83,8 @@ export const apiGenerateImages = (
     color: string, 
     numberOfImages: number,
     model: string
-): Promise<{ imageUrls: string[], credits: number }> => {
-    return fetchApi<{ imageUrls: string[], credits: number }>('/images/generate', {
+): Promise<GenerationResponse> => {
+    return fetchApi<GenerationResponse>('/images/generate', {
         method: 'POST',
         body: JSON.stringify({ 
             prompt, 

@@ -15,6 +15,7 @@ export const generateImages = (
     numberOfImages: number,
     model: string
 ) => {
+    // The return type is now Promise<GenerationResponse> from apiService
     return apiGenerateImages(prompt, negativePrompt, style, aspectRatio, mood, lighting, color, numberOfImages, model);
 };
 

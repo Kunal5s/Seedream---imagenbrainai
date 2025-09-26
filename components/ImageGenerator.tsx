@@ -44,14 +44,12 @@ const ImageGenerator: React.FC = () => {
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
   const cancelGeneration = useRef(false);
 
-  // NEW: State is now managed asynchronously
   const [currentUserStatus, setCurrentUserStatus] = useState<UserStatus>(createGuestStatus());
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const navigate = useNavigate();
 
-  // NEW: Fetch user status from backend on initial load
   useEffect(() => {
     const fetchStatus = async () => {
       setIsLoadingStatus(true);
@@ -98,27 +96,35 @@ const ImageGenerator: React.FC = () => {
     setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
 
     try {
-      // NEW: Call the backend generation service with the selected model
-      const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages, model);
+      const { results, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages, model);
       
-      // NEW: Update credit balance from the server's response
       setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
 
-      for (let i = 0; i < imageUrls.length; i++) {
-        if (cancelGeneration.current) {
-            setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
-            break;
+      // Handle partial success/failure from the API
+      setImages(prevImages => {
+        const newImagesState = [...prevImages];
+        results.forEach((result, index) => {
+          if (cancelGeneration.current) return;
+          if (newImagesState[index]) {
+            if (result.status === 'success') {
+              newImagesState[index] = { key: Date.now() + index, src: result.url, status: 'success', error: null };
+            } else {
+              newImagesState[index] = { key: Date.now() + index, src: null, status: 'error', error: result.message };
+            }
+          }
+        });
+        // If generation was cancelled, revert any remaining loading placeholders
+        if(cancelGeneration.current) {
+            return newImagesState.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img);
         }
-        setImages(prev => prev.map((img, index) => 
-            index === i ? { ...img, status: 'success', src: imageUrls[i], key: Date.now() + i } : img
-        ));
-      }
+        return newImagesState;
+      });
 
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
       setGlobalError(errorMsg);
       setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
-      // The backend should handle refunding credits on failure, but we can refetch status to be sure.
+      
       const status = await getLicensedUserStatus();
       setCurrentUserStatus(status);
     } finally {
@@ -143,13 +149,24 @@ const ImageGenerator: React.FC = () => {
     setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'loading', src: null, error: null } : img));
     
     try {
-        const { imageUrls, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, 1, model);
+        const { results, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, 1, model);
         
         setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
         
-        setImages(prev => prev.map((img, i) => 
-            i === index ? { ...img, status: 'success', src: imageUrls[0], key: Date.now() + i } : img
-        ));
+        const result = results[0];
+        if (!result) throw new Error('API did not return a result.');
+
+        setImages(prev => prev.map((img, i) => {
+            if (i === index) {
+                if (result.status === 'success') {
+                    return { ...img, status: 'success', src: result.url, key: Date.now() + i };
+                } else {
+                    return { ...img, status: 'error', error: result.message };
+                }
+            }
+            return img;
+        }));
+
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
@@ -321,10 +338,10 @@ const ImageGenerator: React.FC = () => {
          </div>
       )}
       <div className="text-center">
-        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || !hasEnoughCredits || isGenerating}>
+        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || (!hasEnoughCredits && !isGenerating)}>
             {isGenerating ? 'Stop Generating' : `Generate Images (~${creditsNeeded} Credits)`}
         </Button>
-        {!hasEnoughCredits && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please see our pricing plans.</p>}
+        {!hasEnoughCredits && !isGenerating && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please see our pricing plans or activate a license.</p>}
       </div>
 
 
