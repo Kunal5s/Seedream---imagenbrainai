@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import MetaTags from '../components/MetaTags';
 import { apiGetImageHistory, ImageHistoryItem } from '../services/apiService';
 import Spinner from '../components/ui/Spinner';
 import { Link } from 'react-router-dom';
 import DownloadIcon from '../components/ui/DownloadIcon';
-// FIX: Corrected import path from an alias to a relative path.
 import { downloadImage } from '../services/generationService';
 
 const ImageHistoryPage: React.FC = () => {

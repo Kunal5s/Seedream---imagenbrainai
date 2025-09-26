@@ -18,6 +18,7 @@ import KeyIcon from './ui/KeyIcon';
 import HistoryIcon from './ui/HistoryIcon';
 import Spinner from './ui/Spinner';
 import GalleryIcon from './ui/GalleryIcon';
+import { FrontendResult } from '../services/apiService';
 
 interface ImageState {
     key: number;
@@ -77,11 +78,15 @@ const ImageGenerator: React.FC = () => {
       setCurrentUserStatus(newStatus);
   };
 
-  const isPollinationModel = model === 'pollinations/pollinations-ai';
-
   const handleGenerate = async () => {
     if (!prompt) {
       setGlobalError('Please enter a prompt to generate an image.');
+      return;
+    }
+
+    const creditsNeeded = numberOfImages * creditsPerImage;
+    if (currentUserStatus.credits < creditsNeeded) {
+      setGlobalError(`Not enough credits. You have ${currentUserStatus.credits}. Visit our Pricing section or activate a license.`);
       return;
     }
 
@@ -90,70 +95,37 @@ const ImageGenerator: React.FC = () => {
     cancelGeneration.current = false;
     setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
 
-    if (isPollinationModel) {
-      // Handle free, client-side Pollination.ai generation
-      const fullPrompt = [
-        prompt,
-        style !== 'Photorealistic' ? style : '',
-        mood !== 'Neutral' ? `${mood} mood` : '',
-        lighting !== 'Neutral' ? `${lighting} lighting` : '',
-        color !== 'Default' ? `${color} color scheme` : '',
-      ].filter(Boolean).join(', ');
+    try {
+      const { results, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages, model);
+      setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
 
-      const newImagesState = images.map((_, index) => {
-        const seed = Date.now() + index;
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${aspectRatio.width}&height=${aspectRatio.height}&nologo=true&seed=${seed}`;
-        return {
-          key: Date.now() + index,
-          src: url,
-          status: 'success' as const,
-          error: null,
-        };
+      setImages(prevImages => {
+        const newImagesState = [...prevImages];
+        results.forEach((result, index) => {
+          if (cancelGeneration.current) return;
+          if (newImagesState[index]) {
+            if (result.status === 'success') {
+              newImagesState[index] = { key: Date.now() + index, src: result.url, status: 'success', error: null };
+            } else {
+              newImagesState[index] = { key: Date.now() + index, src: null, status: 'error', error: result.message };
+            }
+          }
+        });
+        if(cancelGeneration.current) {
+            return newImagesState.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img);
+        }
+        return newImagesState;
       });
 
-      setImages(newImagesState);
-      setIsGenerating(false);
-
-    } else {
-      // Handle credit-based, backend generation for other models
-      const creditsNeeded = numberOfImages * creditsPerImage;
-      if (currentUserStatus.credits < creditsNeeded) {
-        setGlobalError(`Not enough credits. You have ${currentUserStatus.credits}. Visit our Pricing section or activate a license.`);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
+      setGlobalError(errorMsg);
+      setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
+      // Re-fetch status in case of server-side credit discrepancy
+      const status = await getLicensedUserStatus();
+      setCurrentUserStatus(status);
+    } finally {
         setIsGenerating(false);
-        setImages(images.map(img => ({ ...img, status: 'placeholder' })));
-        return;
-      }
-
-      try {
-        const { results, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages, model);
-        setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
-
-        setImages(prevImages => {
-          const newImagesState = [...prevImages];
-          results.forEach((result, index) => {
-            if (cancelGeneration.current) return;
-            if (newImagesState[index]) {
-              if (result.status === 'success') {
-                newImagesState[index] = { key: Date.now() + index, src: result.url, status: 'success', error: null };
-              } else {
-                newImagesState[index] = { key: Date.now() + index, src: null, status: 'error', error: result.message };
-              }
-            }
-          });
-          if(cancelGeneration.current) {
-              return newImagesState.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img);
-          }
-          return newImagesState;
-        });
-
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
-        setGlobalError(errorMsg);
-        setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
-        const status = await getLicensedUserStatus();
-        setCurrentUserStatus(status);
-      }
-      setIsGenerating(false);
     }
   };
 
@@ -167,22 +139,7 @@ const ImageGenerator: React.FC = () => {
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: 'Cannot regenerate without a prompt.' } : img));
         return;
     }
-
-    if (isPollinationModel) {
-        // Handle free regeneration for Pollination
-        const fullPrompt = [ prompt, style !== 'Photorealistic' ? style : '', mood !== 'Neutral' ? `${mood} mood` : '', lighting !== 'Neutral' ? `${lighting} lighting` : '', color !== 'Default' ? `${color} color scheme` : '' ].filter(Boolean).join(', ');
-        const seed = Date.now() + index;
-        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${aspectRatio.width}&height=${aspectRatio.height}&nologo=true&seed=${seed}`;
-
-        setImages(prev => prev.map((img, i) => 
-            i === index 
-            ? { key: Date.now() + i, src: url, status: 'success', error: null } 
-            : img
-        ));
-        return;
-    }
     
-    // Handle credit-based regeneration for other models
     if (currentUserStatus.credits < creditsPerImage) {
       setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits.` } : img));
       return;
@@ -212,13 +169,14 @@ const ImageGenerator: React.FC = () => {
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
         setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
+        // Re-fetch status
         const status = await getLicensedUserStatus();
         setCurrentUserStatus(status);
     }
   };
   
-  const creditsNeeded = isPollinationModel ? 0 : numberOfImages * creditsPerImage;
-  const hasEnoughCredits = isPollinationModel || currentUserStatus.credits >= creditsNeeded;
+  const creditsNeeded = numberOfImages * creditsPerImage;
+  const hasEnoughCredits = currentUserStatus.credits >= creditsNeeded;
   
   if (isLoadingStatus) {
     return <div className="flex justify-center items-center h-96"><Spinner /></div>;
@@ -381,7 +339,7 @@ const ImageGenerator: React.FC = () => {
       )}
       <div className="text-center">
         <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || (!hasEnoughCredits && !isGenerating)}>
-            {isGenerating ? 'Stop Generating' : isPollinationModel ? 'Generate (Free)' : `Generate Images (~${creditsNeeded} Credits)`}
+            {isGenerating ? 'Stop Generating' : `Generate Images (~${creditsNeeded} Credits)`}
         </Button>
         {!hasEnoughCredits && !isGenerating && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please see our pricing plans or activate a license.</p>}
       </div>

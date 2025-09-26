@@ -11,6 +11,7 @@ const Footer: React.FC = () => {
     { name: 'Help Center', path: '/help' },
     { name: 'Community', path: '/community' },
     { name: 'Blog', path: '/blog' },
+    { name: 'Marketplace', path: '/marketplace' },
   ];
 
   const resourceLinks = [

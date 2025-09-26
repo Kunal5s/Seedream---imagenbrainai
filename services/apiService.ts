@@ -12,9 +12,9 @@ export interface ImageHistoryItem {
 }
 
 // Define the new types for the robust generation response
-export type GenerationResult = { status: 'success'; url: string; } | { status: 'error'; message: string; };
+export type FrontendResult = { status: 'success'; url: string; } | { status: 'error'; message: string; };
 export interface GenerationResponse {
-    results: GenerationResult[];
+    results: FrontendResult[];
     credits: number;
 }
 

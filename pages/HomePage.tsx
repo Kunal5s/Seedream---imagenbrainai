@@ -1,5 +1,6 @@
+
+
 import React from 'react';
-// FIX: Add `Variants` to framer-motion import to correctly type animation variants.
 import { motion, Variants } from 'framer-motion';
 import GeneratorSuite from '../components/GeneratorSuite';
 import WhyChooseUs from '../components/ui/WhyChooseUs';
@@ -48,7 +49,6 @@ const UsersIcon = () => (
 );
 
 
-// FIX: Explicitly type `cardVariants` with `Variants` from framer-motion to resolve type error.
 const cardVariants: Variants = {
   offscreen: {
     y: 50,

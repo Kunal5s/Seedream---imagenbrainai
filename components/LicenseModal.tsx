@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { activateLicense, UserStatus } from '../services/licenseService';
@@ -118,9 +119,7 @@ const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onSuccess 
                         <div className="pt-4">
                             <button
                                 type="submit"
-                                // FIX: This comparison is invalid because TypeScript narrows the `status` type to 'idle' in this code block.
-                                // The button is only rendered when not loading, so it can't be disabled for that reason.
-                                disabled={false}
+                                disabled={!email || !licenseKey}
                                 className="w-full bg-green-500 text-black font-bold py-3 px-6 rounded-lg transition-all duration-300 ease-in-out transform hover:bg-green-400 hover:shadow-lg hover:shadow-green-400/50 focus:outline-none focus:ring-4 focus:ring-green-400 disabled:bg-gray-600 disabled:cursor-not-allowed"
                             >
                                 Activate Plan
