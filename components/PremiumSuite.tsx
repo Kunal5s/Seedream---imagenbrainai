@@ -10,10 +10,13 @@ const PremiumSuite: React.FC = () => {
         <div className="py-3 px-4 font-semibold text-lg text-yellow-300 border-b-2 border-yellow-300 flex items-center gap-2">
           <StarIcon />
           Pollination Unlimited 
-          <span className="text-xs bg-yellow-400/20 text-yellow-200 px-2 py-0.5 rounded-full">PREMIUM</span>
+          <span className="text-xs bg-yellow-400/20 text-yellow-200 px-2 py-0.5 rounded-full">FREE (FOR NOW)</span>
         </div>
       </div>
       <div className="p-4 md:p-8">
+        <p className="text-center text-yellow-200 bg-yellow-900/30 p-3 rounded-lg mb-6 text-sm">
+          This advanced tool is currently free for all users. It will become a premium feature for paid plans next week.
+        </p>
         <PremiumPollinationGenerator />
       </div>
     </div>

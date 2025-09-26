@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { generateImages, downloadImage } from '../services/generationService';
+import { downloadImage } from '../services/generationService';
+import { apiSaveImage } from '../services/apiService';
 import { CREATIVE_STYLES, IMAGEN_BRAIN_RATIOS, MOODS, LIGHTING_STYLES, COLORS, OPEN_ROUTER_MODELS } from '../constants';
 import { getLicensedUserStatus, UserStatus, createGuestStatus } from '../services/licenseService';
-import { PLAN_DETAILS } from '../config/plans';
 import Button from './ui/Button';
 import Select from './ui/Select';
 import MoonLoader from './ui/MoonLoader';
@@ -18,7 +18,6 @@ import KeyIcon from './ui/KeyIcon';
 import HistoryIcon from './ui/HistoryIcon';
 import Spinner from './ui/Spinner';
 import GalleryIcon from './ui/GalleryIcon';
-import { FrontendResult } from '../services/apiService';
 
 interface ImageState {
     key: number;
@@ -26,6 +25,8 @@ interface ImageState {
     status: 'placeholder' | 'loading' | 'success' | 'error';
     error?: string | null;
 }
+
+const LOCAL_STORAGE_KEY = 'seedream_last_generation_main';
 
 const ImageGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
@@ -38,18 +39,33 @@ const ImageGenerator: React.FC = () => {
   const [color, setColor] = useState(COLORS[0]);
   const [numberOfImages, setNumberOfImages] = useState(4);
   
-  const [images, setImages] = useState<ImageState[]>([]);
+  const [images, setImages] = useState<ImageState[]>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+            }
+        } catch (e) {
+            console.error("Failed to parse saved images.", e);
+        }
+    }
+    return [];
+  });
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
-  const cancelGeneration = useRef(false);
-
+  
   const [currentUserStatus, setCurrentUserStatus] = useState<UserStatus>(createGuestStatus());
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  const abortControllers = useRef<AbortController[]>([]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -60,22 +76,72 @@ const ImageGenerator: React.FC = () => {
     };
     fetchStatus();
   }, []);
-
-  const activePlanDetails = Object.values(PLAN_DETAILS).find(p => p.name === currentUserStatus.plan) || PLAN_DETAILS['FREE_TRIAL'];
-  const creditsPerImage = activePlanDetails.creditsPerImage;
-
+  
   useEffect(() => {
-    setImages(
-      Array.from({ length: numberOfImages }, (_, i) => ({
-        key: Date.now() + i,
-        src: null,
-        status: 'placeholder',
-      }))
-    );
+    if (images.length === 0 || images.length !== numberOfImages) {
+        setImages(
+          Array.from({ length: numberOfImages }, (_, i) => ({
+            key: Date.now() + i,
+            src: null,
+            status: 'placeholder',
+          }))
+        );
+    }
   }, [numberOfImages]);
   
   const handleLicenseActivationSuccess = (newStatus: UserStatus) => {
       setCurrentUserStatus(newStatus);
+  };
+
+  const getFullPrompt = () => {
+    return [
+      prompt, style !== 'Photorealistic' ? style : '', mood !== 'Neutral' ? `${mood} mood` : '',
+      lighting !== 'Neutral' ? `${lighting} lighting` : '', color !== 'Default' ? `${color} color scheme` : '',
+      negativePrompt ? `avoiding ${negativePrompt}` : ''
+    ].filter(Boolean).join(', ');
+  };
+  
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            if (typeof reader.result === 'string') {
+                resolve(reader.result.split(',')[1]);
+            } else {
+                reject(new Error('Failed to read blob as base64 string.'));
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+  };
+
+  const generateSingleImage = async (signal: AbortSignal): Promise<{ status: 'success'; url: string } | { status: 'error'; message: string } | { status: 'cancelled' }> => {
+    try {
+        const fullPrompt = getFullPrompt();
+        const { width, height } = aspectRatio;
+        const seed = Math.floor(Math.random() * 1000000000);
+        const pollinationUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+
+        const response = await fetch(pollinationUrl, { signal });
+        if (!response.ok) throw new Error(`Pollinations.ai error: ${response.statusText}`);
+
+        const blob = await response.blob();
+        const base64Image = await blobToBase64(blob);
+
+        // Save to backend in the background, but don't wait for it
+        apiSaveImage(base64Image, prompt, fullPrompt, width, height)
+            .catch(err => console.error("Failed to save image to backend:", err));
+
+        return { status: 'success', url: URL.createObjectURL(blob) };
+    } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+            return { status: 'cancelled' };
+        }
+        const message = err instanceof Error ? err.message : 'Unknown generation error.';
+        console.error('Image generation failed:', err);
+        return { status: 'error', message };
+    }
   };
 
   const handleGenerate = async () => {
@@ -83,101 +149,49 @@ const ImageGenerator: React.FC = () => {
       setGlobalError('Please enter a prompt to generate an image.');
       return;
     }
-
-    const creditsNeeded = numberOfImages * creditsPerImage;
-    if (currentUserStatus.credits < creditsNeeded) {
-      setGlobalError(`Not enough credits. You have ${currentUserStatus.credits}. Visit our Pricing section or activate a license.`);
-      return;
-    }
-
+    
     setIsGenerating(true);
     setGlobalError(null);
-    cancelGeneration.current = false;
-    setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
+    abortControllers.current = [];
 
-    try {
-      const { results, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, numberOfImages, model);
-      setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
+    const initialImages = Array.from({ length: numberOfImages }, (_, i) => ({
+        key: Date.now() + i, src: null, status: 'loading' as const, error: null
+    }));
+    setImages(initialImages);
 
-      setImages(prevImages => {
-        const newImagesState = [...prevImages];
-        results.forEach((result, index) => {
-          if (cancelGeneration.current) return;
-          if (newImagesState[index]) {
-            if (result.status === 'success') {
-              newImagesState[index] = { key: Date.now() + index, src: result.url, status: 'success', error: null };
-            } else {
-              newImagesState[index] = { key: Date.now() + index, src: null, status: 'error', error: result.message };
-            }
-          }
-        });
-        if(cancelGeneration.current) {
-            return newImagesState.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img);
+    const generationPromises = initialImages.map((_, index) => {
+        const controller = new AbortController();
+        abortControllers.current[index] = controller;
+        return generateSingleImage(controller.signal);
+    });
+    const results = await Promise.all(generationPromises);
+
+    const newImages = initialImages.map((img, index) => {
+        const result = results[index];
+        if (result.status === 'success') {
+            return { ...img, src: result.url, status: 'success' as const };
         }
-        return newImagesState;
-      });
-
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred during generation.';
-      setGlobalError(errorMsg);
-      setImages(images.map(img => ({ ...img, status: 'error', error: errorMsg })));
-      // Re-fetch status in case of server-side credit discrepancy
-      const status = await getLicensedUserStatus();
-      setCurrentUserStatus(status);
-    } finally {
-        setIsGenerating(false);
+        if (result.status === 'error') {
+            return { ...img, src: null, status: 'error' as const, error: result.message };
+        }
+        return img; // Keep it loading if cancelled, handleStop will clean up
+    });
+    
+    // Filter out any cancelled ones before saving to local storage
+    const finalImages = newImages.filter((_img, index) => results[index].status !== 'cancelled');
+    if (finalImages.length > 0) {
+        setImages(newImages); // Update UI with all results
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newImages.filter(img => img.status === 'success')));
     }
-  };
-
-  const handleStop = () => {
-    cancelGeneration.current = true;
     setIsGenerating(false);
   };
   
-  const handleRegenerateSingle = async (index: number) => {
-    if (!prompt) {
-        setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: 'Cannot regenerate without a prompt.' } : img));
-        return;
-    }
-    
-    if (currentUserStatus.credits < creditsPerImage) {
-      setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: `Not enough credits.` } : img));
-      return;
-    }
-
-    setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'loading', src: null, error: null } : img));
-    
-    try {
-        const { results, credits: updatedCredits } = await generateImages(prompt, negativePrompt, style, aspectRatio.name, mood, lighting, color, 1, model);
-        
-        setCurrentUserStatus(prev => ({...prev, credits: updatedCredits }));
-        
-        const result = results[0];
-        if (!result) throw new Error('API did not return a result.');
-
-        setImages(prev => prev.map((img, i) => {
-            if (i === index) {
-                if (result.status === 'success') {
-                    return { ...img, status: 'success', src: result.url, key: Date.now() + i };
-                } else {
-                    return { ...img, status: 'error', error: result.message };
-                }
-            }
-            return img;
-        }));
-
-    } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Failed to regenerate image.';
-        setImages(prev => prev.map((img, i) => i === index ? { ...img, status: 'error', error: errorMsg } : img));
-        // Re-fetch status
-        const status = await getLicensedUserStatus();
-        setCurrentUserStatus(status);
-    }
+  const handleStop = () => {
+    abortControllers.current.forEach(controller => controller.abort());
+    setIsGenerating(false);
+    setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
   };
-  
-  const creditsNeeded = numberOfImages * creditsPerImage;
-  const hasEnoughCredits = currentUserStatus.credits >= creditsNeeded;
-  
+    
   if (isLoadingStatus) {
     return <div className="flex justify-center items-center h-96"><Spinner /></div>;
   }
@@ -250,60 +264,34 @@ const ImageGenerator: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="flex flex-col">
-          <label htmlFor="model-select" className="block text-sm font-medium text-gray-400 mb-1">
-            AI Model
-          </label>
-          <select
-            id="model-select"
+        <Select
+            label="AI Model"
             value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
-          >
-            {OPEN_ROUTER_MODELS.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-        </div>
+            onChange={setModel}
+            options={OPEN_ROUTER_MODELS.map(m => m.id)}
+            displayOptions={OPEN_ROUTER_MODELS.map(m => m.name)}
+        />
         <Select
           label="Creative Style"
           value={style}
           onChange={setStyle}
           options={CREATIVE_STYLES}
         />
-        <div className="flex flex-col">
-          <label htmlFor="aspect-ratio-select" className="block text-sm font-medium text-gray-400 mb-1">
-            Aspect Ratio
-          </label>
-          <select
-            id="aspect-ratio-select"
-            value={aspectRatio.name}
-            onChange={(e) => {
-              const selectedRatio = IMAGEN_BRAIN_RATIOS.find(r => r.name === e.target.value);
+        <Select
+          label="Aspect Ratio"
+          value={aspectRatio.name}
+          onChange={(val) => {
+              const selectedRatio = IMAGEN_BRAIN_RATIOS.find(r => r.name === val);
               if (selectedRatio) setAspectRatio(selectedRatio);
-            }}
-            className="w-full bg-gray-900 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
-          >
-            {IMAGEN_BRAIN_RATIOS.map(ratio => (
-              <option key={ratio.name} value={ratio.name}>{ratio.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label htmlFor="number-of-images" className="block text-sm font-medium text-gray-400 mb-1">
-            Number of Images
-          </label>
-          <select
-             id="number-of-images"
-             value={numberOfImages}
-             onChange={(e) => setNumberOfImages(parseInt(e.target.value, 10))}
-             className="w-full bg-gray-900 border border-gray-700 rounded-md p-2.5 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition-colors"
-          >
-            {[1, 2, 3, 4].map(num => (
-              <option key={num} value={num}>{num}</option>
-            ))}
-          </select>
-        </div>
+          }}
+          options={IMAGEN_BRAIN_RATIOS.map(r => r.name)}
+        />
+        <Select
+             label="Number of Images"
+             value={String(numberOfImages)}
+             onChange={(e) => setNumberOfImages(parseInt(e, 10))}
+             options={['1','2','3','4']}
+          />
       </div>
       
       <div>
@@ -338,10 +326,15 @@ const ImageGenerator: React.FC = () => {
          </div>
       )}
       <div className="text-center">
-        <Button onClick={isGenerating ? handleStop : handleGenerate} disabled={!prompt || (!hasEnoughCredits && !isGenerating)}>
-            {isGenerating ? 'Stop Generating' : `Generate Images (~${creditsNeeded} Credits)`}
-        </Button>
-        {!hasEnoughCredits && !isGenerating && <p className="text-yellow-400 text-sm mt-2">You need more credits. Please see our pricing plans or activate a license.</p>}
+        {isGenerating ? (
+            <Button onClick={handleStop} variant="secondary">
+                Stop Generating
+            </Button>
+        ) : (
+            <Button onClick={handleGenerate} disabled={!prompt}>
+                Generate
+            </Button>
+        )}
       </div>
 
 
@@ -359,8 +352,9 @@ const ImageGenerator: React.FC = () => {
               {image.status === 'success' && image.src && (
                 <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
-                      onClick={() => handleRegenerateSingle(index)}
-                      className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                      disabled={isGenerating}
+                      onClick={() => { /* Regenerate logic not implemented for client-side */ }}
+                      className="text-gray-300 hover:text-green-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm disabled:opacity-50" 
                       title="Regenerate this image">
                       <RegenerateIcon className="w-5 h-5" />
                     </button>

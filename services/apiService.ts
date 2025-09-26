@@ -1,21 +1,19 @@
 import { UserStatus } from './licenseService';
 
-// This would typically be in an environment variable, but for this context,
-// it's fine to have it here as it points to the same origin's API routes.
 const API_BASE_URL = '/api';
 
-export interface ImageHistoryItem {
+// A more comprehensive record for an image, used in history and marketplace
+export interface ImageRecord {
   id: string;
   url: string;
   prompt: string;
+  fullPrompt: string;
+  width: number;
+  height: number;
   createdAt: string;
-}
-
-// Define the new types for the robust generation response
-export type FrontendResult = { status: 'success'; url: string; } | { status: 'error'; message: string; };
-export interface GenerationResponse {
-    results: FrontendResult[];
-    credits: number;
+  expiresAt?: string; // No longer used but kept for type safety
+  price?: number; // Price on the marketplace
+  purchaseLink?: string; // Link to buy the image
 }
 
 // A generic helper function to handle fetch requests and standardized error handling.
@@ -47,20 +45,10 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
 // --- API Service Functions ---
 
-/**
- * Fetches the current user's status from the backend.
- * The backend should identify the user via a session cookie.
- */
 export const apiGetUserStatus = (): Promise<UserStatus> => {
   return fetchApi<UserStatus>('/user/status', { method: 'GET' });
 };
 
-/**
- * Sends a license key and email to the backend for activation.
- * @param email The email used during purchase.
- * @param key The license key from Polar.sh.
- * @returns The user's updated status from the backend.
- */
 export const apiActivateLicense = (email: string, key: string): Promise<UserStatus> => {
   return fetchApi<UserStatus>('/license/activate', {
     method: 'POST',
@@ -69,40 +57,32 @@ export const apiActivateLicense = (email: string, key: string): Promise<UserStat
 };
 
 /**
- * Sends a comprehensive generation request to the backend.
- * The backend handles the AI call, R2 upload, and credit deduction.
- * @returns An object containing the results of each generation attempt and the user's updated credit balance.
+ * Sends a client-generated image to the backend for permanent storage and
+ * to trigger the new marketplace logic.
+ * @param base64Image The base64-encoded image string.
+ * @param prompt The original, user-entered prompt.
+ * @param fullPrompt The complete, decorated prompt with all style modifiers.
+ * @param width The image width.
+ * @param height The image height.
+ * @returns A promise that resolves with the full saved image record.
  */
-export const apiGenerateImages = (
-    prompt: string, 
-    negativePrompt: string, 
-    style: string, 
-    aspectRatio: string, 
-    mood: string, 
-    lighting: string, 
-    color: string, 
-    numberOfImages: number,
-    model: string
-): Promise<GenerationResponse> => {
-    return fetchApi<GenerationResponse>('/images/generate', {
+export const apiSaveImage = (base64Image: string, prompt: string, fullPrompt: string, width: number, height: number): Promise<ImageRecord> => {
+    return fetchApi<ImageRecord>('/images/save', {
         method: 'POST',
-        body: JSON.stringify({ 
-            prompt, 
-            negativePrompt, 
-            style, 
-            aspectRatio, 
-            mood, 
-            lighting, 
-            color, 
-            numberOfImages,
-            model
-        }),
+        body: JSON.stringify({ base64Image, prompt, fullPrompt, width, height }),
     });
 };
 
 /**
- * Fetches the user's generated image history from the backend.
+ * Fetches the user's private, non-expired generated image history.
  */
-export const apiGetImageHistory = (): Promise<ImageHistoryItem[]> => {
-    return fetchApi<ImageHistoryItem[]>('/images/history', { method: 'GET' });
+export const apiGetImageHistory = (): Promise<ImageRecord[]> => {
+    return fetchApi<ImageRecord[]>('/images/history', { method: 'GET' });
+};
+
+/**
+ * Fetches all images that are currently for sale on the marketplace.
+ */
+export const apiGetMarketplaceItems = (): Promise<ImageRecord[]> => {
+    return fetchApi<ImageRecord[]>('/marketplace/list', { method: 'GET' });
 };

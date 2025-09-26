@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IMAGEN_BRAIN_RATIOS } from '../constants';
 import Button from './ui/Button';
 import Select from './ui/Select';
@@ -6,6 +6,10 @@ import MoonLoader from './ui/MoonLoader';
 import ImagePlaceholder from './ui/ImagePlaceholder';
 import SuccessWrapper from './ui/SuccessWrapper';
 import ImageErrorPlaceholder from './ui/ImageErrorPlaceholder';
+import { downloadImage } from '../services/generationService';
+import { apiSaveImage } from '../services/apiService';
+import RegenerateIcon from './ui/RegenerateIcon';
+import DownloadIcon from './ui/DownloadIcon';
 import { 
     PREMIUM_STYLES, PREMIUM_MOODS, PREMIUM_LIGHTING, PREMIUM_COLORS,
     CAMERA_ANGLES, ARTISTS_MOVEMENTS, COMPOSITIONS, ART_MEDIUMS,
@@ -20,20 +24,37 @@ interface ImageState {
     error?: string | null;
 }
 
+const LOCAL_STORAGE_KEY = 'seedream_last_generation_premium';
+
 const DiceIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v1.5a.5.5 0 001 0V4a2 2 0 10-4 0v1.5a.5.5 0 001 0V4a1 1 0 011-1zM5.05 5.05a1 1 0 011.414 0L7.88 6.464a.5.5 0 00.707-.707L7.172 4.343a2 2 0 10-2.828 2.828l1.414-1.414a.5.5 0 00-.707-.707L5.05 6.464a1 1 0 01-1.414-1.414zM10 15a1 1 0 011-1h1.5a.5.5 0 000-1H11a2 2 0 100 4h1.5a.5.5 0 000-1H11a1 1 0 01-1-1zM14.95 14.95a1 1 0 01-1.414 0l-1.414-1.414a.5.5 0 00-.707.707l1.414 1.414a2 2 0 102.828-2.828l-1.414 1.414a.5.5 0 00.707.707l1.414-1.414a1 1 0 011.414 1.414zM4 10a1 1 0 01-1 1v1.5a.5.5 0 000 1V14a2 2 0 104 0v-1.5a.5.5 0 00-1 0V14a1 1 0 01-2 0v-1.5a.5.5 0 00-1 0V11a1 1 0 01-1-1z" clipRule="evenodd" />
     </svg>
 );
-
 
 const PremiumPollinationGenerator: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState(IMAGEN_BRAIN_RATIOS[0]);
   const [numberOfImages, setNumberOfImages] = useState(4);
-  const [images, setImages] = useState<ImageState[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+
+  const [images, setImages] = useState<ImageState[]>(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+            }
+        } catch (e) {
+            console.error("Failed to parse saved premium images.", e);
+        }
+    }
+    return [];
+  });
+  
+  const abortControllers = useRef<AbortController[]>([]);
 
   // --- New State for Advanced Options ---
   const [advancedOptionsVisible, setAdvancedOptionsVisible] = useState(false);
@@ -54,20 +75,22 @@ const PremiumPollinationGenerator: React.FC = () => {
 
 
   useEffect(() => {
-    setImages(
-      Array.from({ length: numberOfImages }, (_, i) => ({
-        key: Date.now() + i,
-        src: null,
-        status: 'placeholder',
-      }))
-    );
+    if (images.length === 0 || images.length !== numberOfImages) {
+        setImages(
+          Array.from({ length: numberOfImages }, (_, i) => ({
+            key: Date.now() + i,
+            src: null,
+            status: 'placeholder',
+          }))
+        );
+    }
   }, [numberOfImages]);
   
   const handleRandomize = () => {
     const getRandomOption = (options: string[]) => {
       const filteredOptions = options.filter(opt => opt !== 'Default');
       const randomIndex = Math.floor(Math.random() * filteredOptions.length);
-      return filteredOptions[randomIndex];
+      return filteredOptions[randomIndex] || options[0]; // Fallback to first option if all are 'Default'
     };
     
     setStyle(getRandomOption(PREMIUM_STYLES));
@@ -88,18 +111,8 @@ const PremiumPollinationGenerator: React.FC = () => {
     setAdvancedOptionsVisible(true);
   };
 
-  const handleGenerate = () => {
-    if (!prompt) {
-      setGlobalError('Please enter a prompt to generate an image.');
-      return;
-    }
-
-    setIsGenerating(true);
-    setGlobalError(null);
-    setImages(images.map(img => ({ ...img, status: 'loading', src: null, error: null })));
-
-    // Combine all options into a detailed prompt
-    const fullPrompt = [
+  const getFullPrompt = () => {
+    return [
         prompt,
         style !== 'Default' ? style : '',
         mood !== 'Default' ? mood : '',
@@ -116,25 +129,99 @@ const PremiumPollinationGenerator: React.FC = () => {
         lens !== 'Default' ? `${lens} lens` : '',
         renderEngine !== 'Default' ? `rendered in ${renderEngine}` : '',
     ].filter(Boolean).join(', ');
-    
-    setTimeout(() => {
-        const newImagesState = images.map((_, index) => {
-            const seed = Date.now() + index;
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${aspectRatio.width}&height=${aspectRatio.height}&nologo=true&seed=${seed}`;
-            
-            return {
-                key: Date.now() + index,
-                src: url,
-                status: 'success' as const,
-                error: null,
-            };
-        });
-
-        setImages(newImagesState);
-        setIsGenerating(false);
-    }, 500); // Small delay to allow loader to appear
+  }
+  
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            if (typeof reader.result === 'string') {
+                resolve(reader.result.split(',')[1]);
+            } else {
+                reject(new Error('Failed to read blob as base64 string.'));
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
   };
 
+  const generateSingleImage = async (signal: AbortSignal): Promise<{ status: 'success'; url: string } | { status: 'error'; message: string } | { status: 'cancelled' }> => {
+    try {
+        const fullPrompt = getFullPrompt();
+        const { width, height } = aspectRatio;
+        const seed = Math.floor(Math.random() * 1000000000);
+        const pollinationUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+
+        const response = await fetch(pollinationUrl, { signal });
+        if (!response.ok) throw new Error(`Pollinations.ai error: ${response.statusText}`);
+
+        const blob = await response.blob();
+        const base64Image = await blobToBase64(blob);
+
+        // Save to backend in the background, but don't wait for it
+        apiSaveImage(base64Image, prompt, fullPrompt, width, height)
+            .catch(err => console.error("Failed to save premium image to backend:", err));
+
+        return { status: 'success', url: URL.createObjectURL(blob) };
+    } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+            return { status: 'cancelled' };
+        }
+        const message = err instanceof Error ? err.message : 'Unknown generation error.';
+        console.error('Premium image generation failed:', err);
+        return { status: 'error', message };
+    }
+  };
+
+
+  const handleGenerate = async () => {
+    if (!prompt) {
+      setGlobalError('Please enter a prompt to generate an image.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGlobalError(null);
+    abortControllers.current = [];
+
+    const initialImages = Array.from({ length: numberOfImages }, (_, i) => ({
+        key: Date.now() + i, src: null, status: 'loading' as const, error: null
+    }));
+    setImages(initialImages);
+
+    const generationPromises = initialImages.map((_, index) => {
+        const controller = new AbortController();
+        abortControllers.current[index] = controller;
+        return generateSingleImage(controller.signal);
+    });
+
+    const results = await Promise.all(generationPromises);
+    
+    const newImages = initialImages.map((img, index) => {
+        const result = results[index];
+        if (result.status === 'success') {
+            return { ...img, src: result.url, status: 'success' as const };
+        }
+        if (result.status === 'error') {
+            return { ...img, src: null, status: 'error' as const, error: result.message };
+        }
+        return img;
+    });
+
+    if (newImages.some(img => img.status !== 'loading')) {
+        setImages(newImages);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newImages.filter(img => img.status === 'success')));
+    }
+    
+    setIsGenerating(false);
+  };
+
+  const handleStop = () => {
+    abortControllers.current.forEach(controller => controller.abort());
+    setIsGenerating(false);
+    setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
+  };
 
   return (
     <div className="space-y-6">
@@ -150,6 +237,7 @@ const PremiumPollinationGenerator: React.FC = () => {
           className="w-full bg-gray-900 border border-gray-700 rounded-md p-3 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
           placeholder="e.g., a beautiful painting of a whimsical landscape by studio ghibli, detailed, 4k"
         />
+         <p className="text-xs text-gray-500 mt-2">This generator is free and does not use credits. Art by <a href="https://pollinations.ai/" target="_blank" rel="noopener noreferrer" className="underline hover:text-yellow-300">Pollinations.ai</a>.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -195,21 +283,43 @@ const PremiumPollinationGenerator: React.FC = () => {
       )}
 
       <div className="text-center">
-        <Button onClick={handleGenerate} disabled={!prompt || isGenerating}>
-          {isGenerating ? 'Generating with Pollination...' : 'Generate with Pollination'}
-        </Button>
+        {isGenerating ? (
+            <Button onClick={handleStop} variant="secondary">Stop Generating</Button>
+        ) : (
+            <Button onClick={handleGenerate} disabled={!prompt} variant="secondary">
+              Generate with Pollination
+            </Button>
+        )}
       </div>
 
       {globalError && !isGenerating && <p className="text-red-400 text-center bg-red-900/20 p-3 rounded-lg">{globalError}</p>}
 
       <div className="mt-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start justify-center">
-          {images.map((image) => (
+          {images.map((image, index) => (
             <div key={image.key} className={`relative group w-full ${aspectRatio.className} bg-gray-900/50 rounded-lg border-2 border-dashed border-gray-700 flex items-center justify-center`}>
               {image.status === 'placeholder' && <ImagePlaceholder aspectRatioClass={aspectRatio.className} />}
               {image.status === 'loading' && <MoonLoader />}
               {image.status === 'success' && image.src && <SuccessWrapper src={image.src} alt={`Generated pollination image`} />}
               {image.status === 'error' && <ImageErrorPlaceholder message={image.error || 'An error occurred'} aspectRatioClass={aspectRatio.className} />}
+              
+              {image.status === 'success' && image.src && (
+                <div className="absolute top-2 right-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      disabled={isGenerating}
+                      onClick={() => { /* Regenerate logic not implemented for client-side */ }}
+                      className="text-gray-300 hover:text-yellow-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm disabled:opacity-50" 
+                      title="Regenerate this image">
+                      <RegenerateIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => downloadImage(image.src!, prompt)} 
+                      className="text-gray-300 hover:text-yellow-300 transition-colors p-1.5 rounded-full bg-black/60 backdrop-blur-sm" 
+                      title="Download as PNG">
+                      <DownloadIcon className="w-5 h-5" />
+                    </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

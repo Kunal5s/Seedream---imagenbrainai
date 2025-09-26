@@ -1,9 +1,7 @@
-// api/images/history.ts
+// api/marketplace/list.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../../services/firebase';
 import { ImageRecord } from '../../services/apiService';
-
-const MOCK_USER_ID = 'user_demo_123';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -11,37 +9,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
   try {
-    // Fetch only the user's private images, which constitute their active history
-    const historyCollectionRef = db.collection('images');
-    const snapshot = await historyCollectionRef
-        .where('userId', '==', MOCK_USER_ID)
-        .where('marketplaceStatus', '==', 'private')
+    const marketplaceCollectionRef = db.collection('images');
+    const snapshot = await marketplaceCollectionRef
+        .where('marketplaceStatus', '==', 'live')
         .orderBy('createdAt', 'desc')
+        .limit(50) // Paginate for performance
         .get();
 
     if (snapshot.empty) {
       return res.status(200).json([]);
     }
 
-    const history: ImageRecord[] = snapshot.docs.map(doc => {
+    const items: ImageRecord[] = snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
         url: data.url,
         prompt: data.prompt,
-        fullPrompt: data.fullPrompt,
-        width: data.width,
-        height: data.height,
         createdAt: data.createdAt,
         price: data.price,
         purchaseLink: data.purchaseLink,
       };
     });
     
-    res.status(200).json(history);
+    res.status(200).json(items);
 
   } catch (error) {
-    console.error('Error fetching image history:', error);
-    res.status(500).json({ message: 'Failed to fetch image history.' });
+    console.error('Error fetching marketplace items:', error);
+    res.status(500).json({ message: 'Failed to fetch marketplace items.' });
   }
 }

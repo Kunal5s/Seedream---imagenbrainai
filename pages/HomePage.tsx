@@ -1,8 +1,11 @@
 
 
+
+
 import React from 'react';
 import { motion, Variants } from 'framer-motion';
 import GeneratorSuite from '../components/GeneratorSuite';
+import PremiumSuite from '../components/PremiumSuite';
 import WhyChooseUs from '../components/ui/WhyChooseUs';
 import MetaTags from '../components/MetaTags';
 import PricingSection from '../components/PricingSection';
@@ -11,7 +14,6 @@ import Testimonials from '../components/Testimonials';
 import CallToAction from '../components/CallToAction';
 import BlogFeedSection from '../components/BlogFeedSection';
 import HeroBackgroundAnimation from '../components/ui/HeroBackgroundAnimation';
-import PremiumSuite from '../components/PremiumSuite';
 
 // --- SVG Icons for components ---
 const CheckCircleIcon = () => (

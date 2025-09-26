@@ -1,23 +1,3 @@
-import { apiGenerateImages } from './apiService';
-
-/**
- * A wrapper for the API call to generate images.
- * This encapsulates any client-side logic before calling the API.
- */
-export const generateImages = (
-    prompt: string, 
-    negativePrompt: string, 
-    style: string, 
-    aspectRatio: string, 
-    mood: string, 
-    lighting: string, 
-    color: string, 
-    numberOfImages: number,
-    model: string
-) => {
-    // The return type is now Promise<GenerationResponse> from apiService
-    return apiGenerateImages(prompt, negativePrompt, style, aspectRatio, mood, lighting, color, numberOfImages, model);
-};
 
 /**
  * Triggers a browser download for a given image URL.
