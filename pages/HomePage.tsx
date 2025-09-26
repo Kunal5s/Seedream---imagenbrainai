@@ -10,6 +10,7 @@ import Testimonials from '../components/Testimonials';
 import CallToAction from '../components/CallToAction';
 import BlogFeedSection from '../components/BlogFeedSection';
 import HeroBackgroundAnimation from '../components/ui/HeroBackgroundAnimation';
+import PremiumSuite from '../components/PremiumSuite';
 
 // --- SVG Icons for components ---
 const CheckCircleIcon = () => (
@@ -452,6 +453,8 @@ const HomePage: React.FC = () => {
         <HeroSection />
 
         <GeneratorSuite />
+
+        <PremiumSuite />
 
         <BlogFeedSection />
         

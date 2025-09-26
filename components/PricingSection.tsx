@@ -13,7 +13,7 @@ const PricingSection: React.FC = () => {
       };
 
   return (
-    <section>
+    <section id="pricing">
       <div className="text-center mb-12">
         <h2 className="text-3xl md:text-4xl font-bold">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-200 to-green-400">
