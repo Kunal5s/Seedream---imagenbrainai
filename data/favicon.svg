@@ -1,4 +1,8 @@
 <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="50" cy="50" r="48" fill="#10B981"/>
-<path d="M30 79C33 71.5 41.2 57.2 44.5 51.5C46 48.5 47 47 48 47C49 47 50 48 50.5 49.5C52 54.5 53.5 58.5 55 62C56 64.5 57.5 68 59 70.5C63 77.5 66.5 79 66.5 79H30Z M61 41C58.5 41 56.5 43 56.5 45.5C56.5 48 58.5 50 61 50C63.5 50 65.5 48 65.5 45.5C65.5 43 63.5 41 61 41Z" fill="white"/>
+<circle cx="50" cy="50" r="48" fill="#10B981" stroke="#F0FDF4" stroke-width="4"/>
+<path d="M28 80 L55 35 L82 80 Z" fill="#065F46" stroke="#10B981" stroke-width="2" stroke-linejoin="round"/>
+<path d="M55 35 L67 60 L43 60 Z" fill="#FFFFFF"/>
+<polygon points="72,80 67,70 77,70" fill="#047857"/>
+<polygon points="72,71 68,63 76,63" fill="#047857"/>
+<rect x="71" y="80" width="2" height="5" fill="#78350F"/>
 </svg>
