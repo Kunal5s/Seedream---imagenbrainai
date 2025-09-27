@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BlogPost } from '../data/blogData';
-// FIX: Corrected import from 'getArticles' to 'getAllArticles' as suggested by the error.
 import { getAllArticles } from '../data/blogData';
 
 const FooterBlogFeed: React.FC = () => {
@@ -11,7 +10,6 @@ const FooterBlogFeed: React.FC = () => {
   useEffect(() => {
     const loadRecentPosts = async () => {
       try {
-        // FIX: Corrected function call from 'getArticles' to 'getAllArticles' to fetch blog posts.
         const allPosts = await getAllArticles();
         // Get the most recent 3 posts
         setPosts(allPosts.slice(0, 3));
