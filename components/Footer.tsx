@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import FooterBlogFeed from './FooterBlogFeed';
@@ -11,7 +12,6 @@ const Footer: React.FC = () => {
     { name: 'Help Center', path: '/help' },
     { name: 'Community', path: '/community' },
     { name: 'Blog', path: '/blog' },
-    { name: 'User Marketplace', path: '/marketplace' },
     { name: 'Pollinations Market', path: '/pollinations-marketplace' },
   ];
 
