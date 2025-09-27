@@ -81,16 +81,16 @@ const MarketplacePage: React.FC = () => {
                   <div className="aspect-square w-full overflow-hidden">
                     <img 
                       src={item.url} 
-                      alt={item.prompt} 
+                      alt={item.title || item.prompt} 
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       onContextMenu={(e) => e.preventDefault()}
                     />
                   </div>
                   <div className="p-6 flex flex-col flex-grow">
-                    <p className="text-sm text-gray-400 mt-1 line-clamp-2 h-10">{item.prompt}</p>
-                    <div className="mt-4 flex-grow"></div>
-                    <div className="flex justify-between items-center mt-4">
-                        <p className="text-lg font-semibold text-white">${item.price}</p>
+                    <h3 className="text-lg font-bold text-green-300 mb-2 h-14 line-clamp-2">{item.title}</h3>
+                    <p className="text-sm text-gray-400 mt-1 line-clamp-3 flex-grow">{item.description}</p>
+                    <div className="mt-4 flex justify-between items-center pt-4 border-t border-green-400/10">
+                        <p className="text-xl font-semibold text-white">${item.price}</p>
                         <a 
                             href={item.purchaseLink}
                             target="_blank"

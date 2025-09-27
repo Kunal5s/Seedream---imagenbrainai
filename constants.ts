@@ -1,6 +1,10 @@
-// FIX: Implemented the full constants file which was previously missing.
-// This provides the necessary data for the UI dropdowns in the ImageGenerator component
-// and resolves the module resolution errors.
+export const OPEN_ROUTER_MODELS: { id: string; name: string }[] = [
+  { id: 'pollinations/seedream-5.0', name: 'Seedream Imagenbrainai 5.0' }
+];
+
+export const BOOSTER_MODEL: { id: string; name: string } = 
+  { id: 'pollinations/seedream-booster-5.0', name: 'Seedream Imagenbrainai Booster 5.0' };
+
 
 export const CREATIVE_STYLES: string[] = [
   'Photorealistic',
@@ -40,7 +44,7 @@ export const CREATIVE_STYLES: string[] = [
   'Double Exposure'
 ];
 
-export const IMAGEN_BRAIN_RATIOS: { name: string; aspectRatio: "1:1" | "3:4" | "4:3" | "9:16" | "16:9"; className: string; width: number; height: number; }[] = [
+export const IMAGEN_BRAIN_RATIOS: { name: string; aspectRatio: string; className: string; width: number; height: number; }[] = [
   { name: 'Square (1:1)', aspectRatio: '1:1', className: 'aspect-square', width: 1024, height: 1024 },
   { name: 'Portrait (3:4)', aspectRatio: '3:4', className: 'aspect-[3/4]', width: 768, height: 1024 },
   { name: 'Landscape (4:3)', aspectRatio: '4:3', className: 'aspect-[4/3]', width: 1024, height: 768 },
@@ -157,9 +161,4 @@ export const COLORS: string[] = [
   'Sunset Hues',
   'Deep Sea Tones',
   'Galactic Nebula Colors'
-];
-
-// Focus exclusively on Pollinations AI
-export const OPEN_ROUTER_MODELS: { name: string; id: string; }[] = [
-  { name: 'Pollinations AI (Free)', id: 'pollinations/pollinations-ai' },
 ];

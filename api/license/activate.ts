@@ -1,16 +1,21 @@
 // api/license/activate.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../../services/firebase';
-import { UserStatus, ActivatedLicense, PlanName } from '../../services/licenseService';
-
-// MOCK: In a real app, you'd get this from a session cookie or JWT
-const MOCK_USER_ID = 'user_demo_123';
+import { UserStatus, ActivatedLicense } from '../../services/licenseService';
+import { PLANS } from '../../config/plans';
+import { verifyFirebaseToken } from '../../services/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
+
+  const decodedToken = await verifyFirebaseToken(req);
+  if (!decodedToken) {
+    return res.status(401).json({ message: 'Unauthorized: You must be signed in to activate a license.' });
+  }
+  const userId = decodedToken.uid;
 
   const { email, key } = req.body;
 
@@ -20,27 +25,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const licensesRef = db.collection('licenses');
-    const userRef = db.collection('users').doc(MOCK_USER_ID);
+    const userRef = db.collection('users').doc(userId);
     
-    // Check if license key has already been used
     const snapshot = await licensesRef.where('key', '==', key).limit(1).get();
     if (!snapshot.empty) {
-      return res.status(409).json({ message: 'License key has already been used.' });
+      return res.status(409).json({ message: 'This license key has already been activated.' });
     }
 
-    // MOCK: Simulate different valid keys for different plans
-    const PLAN_LOOKUP: Record<string, { planName: PlanName, credits: number }> = {
-        'polar_cl_booster_key': { planName: 'Booster', credits: 5000 },
-        'polar_cl_premium_key': { planName: 'Premium', credits: 15000 },
-        'polar_cl_pro_key': { planName: 'Professional', credits: 30000 },
-    };
+    const planDetails = PLANS.find(p => p.id === key);
 
-    const planDetails = PLAN_LOOKUP[key];
     if (!planDetails) {
-        return res.status(404).json({ message: 'License key not found.' });
+        return res.status(404).json({ message: 'Invalid license key. Please check the key and try again.' });
     }
 
-    const { planName, credits } = planDetails;
+    const { name: planName, credits } = planDetails;
 
     const newLicense: ActivatedLicense = {
       key: key,
@@ -51,11 +49,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     };
     
-    // Run a transaction to update user and log the license
     const updatedStatus = await db.runTransaction(async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists) {
-            throw new Error("User not found.");
+            throw new Error("User not found. Please try logging out and back in.");
         }
         const currentData = userDoc.data() as UserStatus;
         
@@ -64,13 +61,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const newStatus: UserStatus = {
             ...currentData,
-            plan: planName, // Update to the highest activated plan
+            plan: planName,
             credits: newCredits,
             licenses: newLicenses,
         };
 
-        transaction.update(userRef, { ...newStatus });
-        transaction.set(licensesRef.doc(key), { usedBy: MOCK_USER_ID, activationDate: new Date() });
+        transaction.update(userRef, newStatus);
+        
+        transaction.set(licensesRef.doc(key), { 
+          usedBy: userId, 
+          email: email,
+          plan: planName,
+          activationDate: newLicense.activationDate 
+        });
         
         return newStatus;
     });

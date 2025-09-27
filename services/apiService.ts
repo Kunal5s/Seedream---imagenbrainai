@@ -11,26 +11,32 @@ export interface ImageRecord {
   width: number;
   height: number;
   createdAt: string;
-  expiresAt?: string; // No longer used but kept for type safety
   price?: number; // Price on the marketplace
   purchaseLink?: string; // Link to buy the image
   marketplaceStatus?: 'private' | 'live';
+  title?: string; // Engaging title from Gemini
+  description?: string; // Detailed description from Gemini
 }
 
 // A generic helper function to handle fetch requests and standardized error handling.
-async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function fetchApi<T>(endpoint: string, options: RequestInit = {}, token?: string): Promise<T> {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
+    const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...options.headers,
-      },
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.message || `API Error:`);
+      const errorData = await response.json().catch(() => ({ message: `API Error: ${response.statusText}` }));
+      throw new Error(errorData?.message || `API Error: ${response.statusText}`);
     }
 
     if (response.status === 204) { // Handle "No Content" responses
@@ -46,39 +52,41 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
 // --- API Service Functions ---
 
-export const apiGetUserStatus = (): Promise<UserStatus> => {
-  return fetchApi<UserStatus>('/user/status', { method: 'GET' });
+export const apiGetUserStatus = (token: string): Promise<UserStatus> => {
+  return fetchApi<UserStatus>('/user/status', { method: 'GET' }, token);
 };
 
-export const apiActivateLicense = (email: string, key: string): Promise<UserStatus> => {
+export const apiActivateLicense = (email: string, key: string, token: string): Promise<UserStatus> => {
   return fetchApi<UserStatus>('/license/activate', {
     method: 'POST',
     body: JSON.stringify({ email, key }),
-  });
+  }, token);
 };
 
 /**
- * Sends a client-generated image to the backend for permanent storage and
- * to trigger the new marketplace logic.
- * @param base64Image The base64-encoded image string.
- * @param prompt The original, user-entered prompt.
- * @param fullPrompt The complete, decorated prompt with all style modifiers.
- * @param width The image width.
- * @param height The image height.
- * @returns A promise that resolves with the full saved image record.
+ * Sends a client-generated image to the backend for permanent storage and handles credit deduction if necessary.
+ * Used by both free and premium generators.
  */
-export const apiSaveImage = (base64Image: string, prompt: string, fullPrompt: string, width: number, height: number): Promise<ImageRecord> => {
-    return fetchApi<ImageRecord>('/images/save', {
+export const apiSaveImage = (
+  base64Image: string, 
+  prompt: string, 
+  fullPrompt: string, 
+  width: number, 
+  height: number, 
+  isPremium: boolean,
+  token?: string | null
+): Promise<{ savedRecord: ImageRecord, credits: number }> => {
+    return fetchApi<{ savedRecord: ImageRecord, credits: number }>('/images/save', {
         method: 'POST',
-        body: JSON.stringify({ base64Image, prompt, fullPrompt, width, height }),
-    });
+        body: JSON.stringify({ base64Image, prompt, fullPrompt, width, height, isPremium }),
+    }, token || undefined);
 };
 
 /**
  * Fetches the user's private, non-expired generated image history.
  */
-export const apiGetImageHistory = (): Promise<ImageRecord[]> => {
-    return fetchApi<ImageRecord[]>('/images/history', { method: 'GET' });
+export const apiGetImageHistory = (token: string): Promise<ImageRecord[]> => {
+    return fetchApi<ImageRecord[]>('/images/history', { method: 'GET' }, token);
 };
 
 /**

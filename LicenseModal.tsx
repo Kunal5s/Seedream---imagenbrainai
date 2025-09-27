@@ -21,19 +21,16 @@ const LicenseModal: React.FC<LicenseModalProps> = ({ isOpen, onClose, onSuccess 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+        setMessage('You must be signed in to activate a license.');
+        setStatus('error');
+        return;
+    }
     setStatus('loading');
     setMessage('');
-
-    // FIX: Added a check for the user and retrieved the auth token before calling the service.
-    if (!user) {
-      setMessage('You must be signed in to activate a license.');
-      setStatus('error');
-      return;
-    }
     
     try {
       const token = await user.getIdToken();
-      // FIX: Passed the required auth token as the third argument.
       const newStatus = await activateLicense(email, licenseKey, token);
       const planDetails = newStatus.licenses.find(l => l.key === licenseKey);
       const creditsAdded = planDetails?.creditsAdded || 0;

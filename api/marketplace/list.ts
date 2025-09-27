@@ -26,9 +26,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id: doc.id,
         url: data.url,
         prompt: data.prompt,
+        fullPrompt: data.fullPrompt,
+        width: data.width,
+        height: data.height,
         createdAt: data.createdAt,
         price: data.price,
         purchaseLink: data.purchaseLink,
+        title: data.title,
+        description: data.description
       };
     });
     

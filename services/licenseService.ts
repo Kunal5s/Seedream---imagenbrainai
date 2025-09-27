@@ -20,7 +20,12 @@ export interface UserStatus {
     plan: PlanName;
     credits: number;
     licenses: ActivatedLicense[];
+    isGuest?: boolean; // Flag to easily identify guest users
 }
+
+const GUEST_CREDITS_KEY = 'seedream_guest_credits';
+const INITIAL_GUEST_CREDITS = 500;
+
 
 /**
  * Creates a default guest status object for users who are not logged in.
@@ -32,37 +37,66 @@ export const createGuestStatus = (): UserStatus => {
         name: 'Guest',
         email: null,
         plan: freeTrialPlan.name,
-        credits: freeTrialPlan.credits,
+        credits: INITIAL_GUEST_CREDITS,
         licenses: [],
+        isGuest: true,
     };
 };
+
+/**
+ * Gets the current guest status from local storage. Initializes if not present.
+ */
+export const getGuestStatus = (): UserStatus => {
+    let creditsStr = localStorage.getItem(GUEST_CREDITS_KEY);
+    if (creditsStr === null) {
+        creditsStr = String(INITIAL_GUEST_CREDITS);
+        localStorage.setItem(GUEST_CREDITS_KEY, creditsStr);
+    }
+    const credits = parseInt(creditsStr, 10);
+    
+    return {
+        ...createGuestStatus(),
+        credits: isNaN(credits) ? INITIAL_GUEST_CREDITS : credits,
+    };
+};
+
+/**
+ * Deducts credits from the guest's local storage balance.
+ * @param amount The number of credits to deduct.
+ * @returns The new credit balance.
+ */
+export const deductGuestCredits = (amount: number): number => {
+    const currentStatus = getGuestStatus();
+    const newCredits = Math.max(0, currentStatus.credits - amount);
+    localStorage.setItem(GUEST_CREDITS_KEY, String(newCredits));
+    return newCredits;
+};
+
 
 /**
  * Fetches the current user's status from the backend API.
  * This is now an asynchronous operation.
  * @returns A promise that resolves to the user's status.
  */
-export const getLicensedUserStatus = async (): Promise<UserStatus> => {
-    try {
-        const status = await apiGetUserStatus();
-        return status;
-    } catch (error) {
-        console.warn("Could not fetch user status, defaulting to guest.", error);
-        // If the API fails (e.g., user not logged in), return a guest status.
-        return createGuestStatus();
-    }
+// FIX: Added token parameter to pass to the API service, resolving a missing argument error.
+export const getLicensedUserStatus = async (token: string): Promise<UserStatus> => {
+    const status = await apiGetUserStatus(token);
+    return { ...status, isGuest: false };
 };
 
 /**
  * Sends a license activation request to the backend.
- * This is now an asynchronous operation.
+ * On success, it clears guest data from local storage.
  * @param email The email address used at checkout.
  * @param key The license key from Polar.sh.
  * @returns A promise that resolves to the user's new status.
  */
-export const activateLicense = async (email: string, key: string): Promise<UserStatus> => {
-    // The API call handles validation and state updates on the server.
-    return await apiActivateLicense(email, key);
+// FIX: Added token parameter to pass to the API service, resolving a missing argument error.
+export const activateLicense = async (email: string, key: string, token: string): Promise<UserStatus> => {
+    const newStatus = await apiActivateLicense(email, key, token);
+    // User is no longer a guest, clear guest credits from local storage
+    localStorage.removeItem(GUEST_CREDITS_KEY);
+    return { ...newStatus, isGuest: false };
 };
 
 // FIX: Export the isLicenseExpired function to resolve the import error.

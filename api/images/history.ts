@@ -2,18 +2,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { db } from '../../services/firebase';
 import { ImageRecord } from '../../services/apiService';
+import { verifyFirebaseToken } from '../../services/auth';
 
-const MOCK_USER_ID = 'user_demo_123';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
+
+  const decodedToken = await verifyFirebaseToken(req);
+  if (!decodedToken) {
+    return res.status(401).json({ message: 'Unauthorized: You must be signed in to view your history.' });
+  }
+  const userId = decodedToken.uid;
+
   try {
     const historyCollectionRef = db.collection('images');
     const snapshot = await historyCollectionRef
-        .where('userId', '==', MOCK_USER_ID)
+        .where('userId', '==', userId)
         .get();
 
     if (snapshot.empty) {
@@ -33,6 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         marketplaceStatus: data.marketplaceStatus,
         price: data.price,
         purchaseLink: data.purchaseLink,
+        title: data.title || null,
+        description: data.description || null,
       };
     });
 

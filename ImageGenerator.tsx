@@ -67,9 +67,7 @@ const ImageGenerator: React.FC = () => {
         return [];
     });
     
-    // FIX: Added auth-aware logic to fetch user status.
-    // The previous implementation called `getLicensedUserStatus` without a required token.
-    useEffect(() => {
+     useEffect(() => {
         const fetchStatus = async () => {
             setIsLoadingStatus(true);
             try {
@@ -85,15 +83,16 @@ const ImageGenerator: React.FC = () => {
                 console.error("Failed to fetch user status, falling back to guest.", error);
                 const guestStatus = getGuestStatus();
                 setCurrentUserStatus(guestStatus);
+                 if (user) {
+                   // If user is logged in but status fetch fails (e.g., new user not in DB yet), sign out to avoid inconsistent state.
+                   // Or better, let the backend create the user on the fly.
+                 }
             } finally {
                 setIsLoadingStatus(false);
             }
         };
-        
-        if (!authLoading) {
-            fetchStatus();
-        }
-    }, [user, authLoading]);
+        fetchStatus();
+    }, [user]);
 
     useEffect(() => {
         if (images.length === 0 || images.length !== numberOfImages) {
@@ -125,7 +124,7 @@ const ImageGenerator: React.FC = () => {
         reader.readAsDataURL(blob);
     });
 
-    const generateSingleImage = async (signal: AbortSignal, isPremiumGeneration: boolean): Promise<{ status: 'success'; url: string } | { status: 'error'; message: string } | { status: 'cancelled' }> => {
+    const generateSingleImage = async (signal: AbortSignal): Promise<{ status: 'success'; url: string } | { status: 'error'; message: string } | { status: 'cancelled' }> => {
         try {
             const fullPrompt = getFullPrompt();
             const { width, height } = aspectRatio;
@@ -140,11 +139,9 @@ const ImageGenerator: React.FC = () => {
             
             const token = user ? await user.getIdToken() : null;
 
-            // Save to backend and deduct credits if premium
-            apiSaveImage(base64Image, prompt, fullPrompt, width, height, isPremiumGeneration, token)
+            apiSaveImage(base64Image, prompt, fullPrompt, width, height, !!user, token)
                 .then(response => {
-                    // For licensed users, the backend response is the source of truth for credits
-                    if (isPremiumGeneration) {
+                    if (user) {
                         setCurrentUserStatus(prev => ({ ...prev!, credits: response.credits, isGuest: false }));
                     }
                 })
@@ -163,10 +160,7 @@ const ImageGenerator: React.FC = () => {
             return;
         }
 
-        if (!currentUserStatus) {
-            setGlobalError('User status is not loaded yet. Please wait a moment.');
-            return;
-        }
+        if (!currentUserStatus) return;
 
         const planKey = Object.keys(PLAN_DETAILS).find(k => PLAN_DETAILS[k].name === currentUserStatus.plan) || 'FREE_TRIAL';
         const creditsPerImage = PLAN_DETAILS[planKey]?.creditsPerImage || 5;
@@ -185,7 +179,6 @@ const ImageGenerator: React.FC = () => {
         setGlobalError(null);
         abortControllers.current = [];
 
-        // For guests, deduct credits immediately from local storage for instant feedback
         if (currentUserStatus.isGuest) {
             const newCredits = deductGuestCredits(creditsNeeded);
             setCurrentUserStatus(prev => ({ ...prev!, credits: newCredits }));
@@ -199,7 +192,7 @@ const ImageGenerator: React.FC = () => {
         const generationPromises = initialImages.map((_, index) => {
             const controller = new AbortController();
             abortControllers.current[index] = controller;
-            return generateSingleImage(controller.signal, !currentUserStatus.isGuest);
+            return generateSingleImage(controller.signal);
         });
 
         const results = await Promise.all(generationPromises);
@@ -221,11 +214,12 @@ const ImageGenerator: React.FC = () => {
         setIsGenerating(false);
         setImages(prev => prev.map(img => img.status === 'loading' ? { ...img, status: 'placeholder' } : img));
     };
-
-    const openAuthModal = (mode: 'login' | 'signup') => {
+    
+     const openAuthModal = (mode: 'login' | 'signup') => {
         setAuthMode(mode);
         setAuthModalOpen(true);
     };
+
 
     if (isLoadingStatus || authLoading) {
         return <div className="flex justify-center items-center h-96"><Spinner /></div>;
@@ -237,9 +231,9 @@ const ImageGenerator: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} initialMode={authMode} />
             {user && <LicenseModal isOpen={isLicenseModalOpen} onClose={() => setIsLicenseModalOpen(false)} onSuccess={handleLicenseActivationSuccess} />}
             {user && <PlanHistoryModal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} licenses={currentUserStatus?.licenses || []} />}
+            <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} initialMode={authMode} />
 
             <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
@@ -251,7 +245,7 @@ const ImageGenerator: React.FC = () => {
                     <p className="font-semibold">Plan: <span className="text-green-300">{currentUserStatus?.plan}</span></p>
                     <p className="font-semibold">Credits: <span className="text-green-300">{currentUserStatus?.credits.toLocaleString()}</span></p>
                 </div>
-                <div className="flex flex-wrap justify-center gap-2 w-full sm:w-auto">
+                 <div className="flex flex-wrap justify-center gap-2 w-full sm:w-auto">
                     <button onClick={() => navigate('/history')} className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-gray-300 text-sm font-semibold py-2 px-4 rounded-lg border border-gray-600/50 hover:bg-white/10"><GalleryIcon className="w-4 h-4" /> Image History</button>
                     {user ? (
                         <>

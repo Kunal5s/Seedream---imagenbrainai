@@ -160,7 +160,8 @@ const PremiumPollinationGenerator: React.FC = () => {
         const base64Image = await blobToBase64(blob);
 
         // Save to backend in the background, but don't wait for it
-        apiSaveImage(base64Image, prompt, fullPrompt, width, height)
+        // FIX: Add 'false' for 'isPremium' argument as this is a free generator.
+        apiSaveImage(base64Image, prompt, fullPrompt, width, height, false)
             .catch(err => console.error("Failed to save premium image to backend:", err));
 
         return { status: 'success', url: URL.createObjectURL(blob) };

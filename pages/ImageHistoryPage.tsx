@@ -5,16 +5,24 @@ import Spinner from '../components/ui/Spinner';
 import { Link } from 'react-router-dom';
 import DownloadIcon from '../components/ui/DownloadIcon';
 import { downloadImage } from '../services/generationService';
+import { useAuth } from '../hooks/useAuth';
 
 const ImageHistoryPage: React.FC = () => {
     const [history, setHistory] = useState<ImageRecord[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const { user, loading: authLoading } = useAuth();
 
     useEffect(() => {
         const fetchHistory = async () => {
+            if (!user) {
+                // Don't fetch if user is not logged in.
+                setIsLoading(false);
+                return;
+            }
             try {
-                const userHistory = await apiGetImageHistory();
+                const token = await user.getIdToken();
+                const userHistory = await apiGetImageHistory(token);
                 setHistory(userHistory);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to load image history.');
@@ -22,12 +30,28 @@ const ImageHistoryPage: React.FC = () => {
                 setIsLoading(false);
             }
         };
-        fetchHistory();
-    }, []);
+        
+        if (!authLoading) {
+            fetchHistory();
+        }
+
+    }, [user, authLoading]);
 
     const renderContent = () => {
-        if (isLoading) {
+        if (isLoading || authLoading) {
             return <div className="flex justify-center py-20"><Spinner /></div>;
+        }
+        
+        if (!user) {
+            return (
+                <div className="text-center text-gray-500 py-20">
+                    <h2 className="text-2xl font-bold mb-2">Please Sign In</h2>
+                    <p>You need to be logged in to view your private image gallery.</p>
+                    <Link to="/" className="mt-4 inline-block bg-green-500 text-black font-bold py-2 px-6 rounded-lg transition-transform duration-300 transform hover:scale-105">
+                        Back to Generator
+                    </Link>
+                </div>
+            );
         }
 
         if (error) {
