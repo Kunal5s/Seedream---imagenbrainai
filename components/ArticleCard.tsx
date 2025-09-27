@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, Variants } from 'framer-motion';
@@ -22,7 +23,10 @@ const cardVariants: Variants = {
 
 const ArticleCard: React.FC<ArticleCardProps> = ({ post }) => {
   return (
-    <motion.div variants={cardVariants}>
+    <motion.div 
+      variants={cardVariants}
+      layoutId={`article-card-${post.slug}`}
+    >
       <Link
         to={`/blog/${post.slug}`}
         className="block h-full bg-gray-900 border border-green-400/20 rounded-lg overflow-hidden transform hover:scale-105 hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-green-400/20 flex flex-col group"

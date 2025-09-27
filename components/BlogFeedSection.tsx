@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BlogPost } from '../data/blogData';
-import { getArticles } from '../data/blogData';
+// FIX: Corrected import from 'getArticles' to 'getAllArticles' as it is the correct exported member.
+import { getAllArticles } from '../data/blogData';
 import Spinner from './ui/Spinner';
 import ArticleCard from './ArticleCard';
 
@@ -15,7 +16,8 @@ const BlogFeedSection: React.FC = () => {
   useEffect(() => {
     const loadArticles = async () => {
       try {
-        const fetchedPosts = await getArticles();
+        // FIX: Corrected function call from 'getArticles' to 'getAllArticles' to fetch blog posts.
+        const fetchedPosts = await getAllArticles();
         setPosts(fetchedPosts.slice(0, POSTS_TO_SHOW)); // Take only the first few
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load articles.');

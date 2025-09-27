@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import MetaTags from '../components/MetaTags';
 import { motion, Variants } from 'framer-motion';
 import { BlogPost } from '../data/blogData';
-import { getArticles } from '../data/blogData';
+// FIX: Changed import from 'getArticles' to 'getAllArticles' to resolve the export error.
+import { getAllArticles } from '../data/blogData';
 import Spinner from '../components/ui/Spinner';
 import ArticleCard from '../components/ArticleCard';
 
@@ -28,7 +29,8 @@ const BlogPage: React.FC = () => {
         setError(null);
         try {
             // The getArticles function now returns the static, local data
-            const fetchedPosts = await getArticles();
+            // FIX: Changed function call from 'getArticles' to 'getAllArticles'.
+            const fetchedPosts = await getAllArticles();
             setPosts(fetchedPosts);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load articles.');

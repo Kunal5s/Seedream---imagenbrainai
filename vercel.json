@@ -14,10 +14,20 @@
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://seedream-imagenbrainai-gamma.vercel.app" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "X-Requested-With, Content-Type, Authorization" }
       ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/move-to-marketplace",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/trigger-bundle-generation",
+      "schedule": "0 0 * * *"
     }
   ]
 }

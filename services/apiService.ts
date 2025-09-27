@@ -18,6 +18,18 @@ export interface ImageRecord {
   description?: string; // Detailed description from Gemini
 }
 
+export interface PollinationBundle {
+  id: string;
+  title: string;
+  description: string;
+  price: number; // in cents
+  imageUrls: string[];
+  purchaseLink: string;
+  createdAt: string;
+  polarProductId: string;
+}
+
+
 // A generic helper function to handle fetch requests and standardized error handling.
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}, token?: string): Promise<T> {
   try {
@@ -94,4 +106,29 @@ export const apiGetImageHistory = (token: string): Promise<ImageRecord[]> => {
  */
 export const apiGetMarketplaceItems = (): Promise<ImageRecord[]> => {
     return fetchApi<ImageRecord[]>('/marketplace/list', { method: 'GET' });
+};
+
+/**
+ * Fetches the daily curated Pollinations AI art bundles.
+ */
+export const apiGetPollinationsBundles = (): Promise<PollinationBundle[]> => {
+    return fetchApi<PollinationBundle[]>('/marketplace/pollinations');
+};
+
+/**
+ * Creates a dynamic Polar.sh checkout session for a list of bundle IDs.
+ */
+export const apiCreateCheckoutSession = (bundleIds: string[]): Promise<{ checkoutUrl: string }> => {
+    return fetchApi<{ checkoutUrl: string }>('/marketplace/create-checkout', {
+        method: 'POST',
+        body: JSON.stringify({ bundleIds }),
+    });
+};
+
+
+/**
+ * Fetches the secure download link for a completed order.
+ */
+export const apiGetDownloadLinkForOrder = (orderId: string): Promise<{ downloadUrl: string | null }> => {
+    return fetchApi<{ downloadUrl: string | null }>(`/marketplace/get-download-link?orderId=${orderId}`);
 };

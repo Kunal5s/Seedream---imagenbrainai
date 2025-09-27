@@ -40,7 +40,7 @@ const ImageGenerator: React.FC = () => {
     const [mood, setMood] = useState(MOODS[0]);
     const [lighting, setLighting] = useState(LIGHTING_STYLES[0]);
     const [color, setColor] = useState(COLORS[0]);
-    const numberOfImages = 4; // Fixed to generate 4 images
+    const numberOfImages = 2; // Fixed to generate 2 images
     const [isGenerating, setIsGenerating] = useState(false);
     const [globalError, setGlobalError] = useState<string | null>(null);
     const [currentUserStatus, setCurrentUserStatus] = useState<UserStatus | null>(null);
@@ -312,7 +312,7 @@ const ImageGenerator: React.FC = () => {
                     <Button onClick={handleStop} variant="secondary">Stop Generating</Button>
                 ) : (
                     <Button onClick={handleGenerate} disabled={!prompt || !currentUserStatus || currentUserStatus.credits < generationCost} variant="primary">
-                        {`Generate 4 Images (${generationCost} Credits)`}
+                        {`Generate ${numberOfImages} Images (${generationCost} Credits)`}
                     </Button>
                 )}
             </div>

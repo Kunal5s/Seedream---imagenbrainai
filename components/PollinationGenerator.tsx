@@ -35,7 +35,7 @@ const DiceIcon = () => (
 const PollinationGenerator: React.FC = () => {
     const [prompt, setPrompt] = useState('');
     const [aspectRatio, setAspectRatio] = useState(IMAGEN_BRAIN_RATIOS[0]);
-    const [numberOfImages, setNumberOfImages] = useState(4);
+    const numberOfImages = 4; // Fixed to generate 4 images
     const [isGenerating, setIsGenerating] = useState(false);
     const [globalError, setGlobalError] = useState<string | null>(null);
 
@@ -196,7 +196,7 @@ const PollinationGenerator: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-2">This generator is free and does not use credits. Art by Seedream Imagenbrainai.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <Select 
                     label="AI Model" 
                     value={BOOSTER_MODEL.id} 
@@ -206,7 +206,6 @@ const PollinationGenerator: React.FC = () => {
                     disabled={true} 
                 />
                 <Select label="Aspect Ratio" value={aspectRatio.name} onChange={(val) => { const r = IMAGEN_BRAIN_RATIOS.find(r => r.name === val); if (r) setAspectRatio(r); }} options={IMAGEN_BRAIN_RATIOS.map(r => r.name)} />
-                <Select label="Number of Images" value={String(numberOfImages)} onChange={(val) => setNumberOfImages(parseInt(val, 10))} options={['1', '2', '3', '4']} />
             </div>
             
             <div className="flex items-center gap-4">

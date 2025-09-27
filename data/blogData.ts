@@ -20,6 +20,11 @@ export interface BlogPost {
   keywords?: string[];
 }
 
+export interface BlogFeedResponse {
+    posts: BlogPost[];
+    totalResults: number;
+}
+
 // --- Dynamic Blog Data Fetching ---
 
 // Define a default author profile, as the Blogger API only provides the name.
@@ -30,8 +35,9 @@ const defaultAuthor: Author = {
   location: 'Nashik, Maharashtra, India',
 };
 
-// In-memory cache to store fetched posts and avoid redundant API calls on the client-side
-let cachedPosts: BlogPost[] | null = null;
+// In-memory cache to store fetched posts by page/query to avoid redundant API calls
+const cache = new Map<string, BlogFeedResponse>();
+
 
 /**
  * Creates a URL-friendly slug from a string.
@@ -49,39 +55,54 @@ const createSlug = (title: string): string => {
 };
 
 /**
- * Fetches and parses articles from our own internal, reliable API endpoint.
- * @returns A promise that resolves to an array of BlogPost objects.
+ * Fetches and parses a paginated and searchable set of articles from our internal API.
+ * @param page The current page number to fetch.
+ * @param limit The number of posts per page.
+ * @param query Optional search query string.
+ * @returns A promise that resolves to a BlogFeedResponse object.
  */
-const fetchAndParseArticles = async (): Promise<BlogPost[]> => {
-    // Point to our new, reliable serverless function
-    const apiUrl = '/api/fetch-blog';
+export const fetchArticles = async ({ page = 1, limit = 100, query = '' }: { page?: number, limit?: number, query?: string }): Promise<BlogFeedResponse> => {
+    const startIndex = (page - 1) * limit + 1;
+    const cacheKey = `page=${page}&limit=${limit}&query=${query}`;
+    
+    if (cache.has(cacheKey)) {
+        return cache.get(cacheKey)!;
+    }
+
+    const apiUrl = `/api/fetch-blog?startIndex=${startIndex}&max-results=${limit}&q=${encodeURIComponent(query)}`;
     
     try {
         const response = await fetch(apiUrl);
         if (!response.ok) {
-            throw new Error(`Failed to fetch from internal API with status: ${response.statusText}`);
+            const errorBody = await response.text();
+            throw new Error(`Failed to fetch from internal API with status: ${response.statusText}. Body: ${errorBody}`);
         }
         
         const bloggerData = await response.json();
 
-        if (!bloggerData.feed || !Array.isArray(bloggerData.feed.entry)) {
+        if (!bloggerData.feed || !bloggerData.feed.openSearch$totalResults) {
             console.warn('Blogger data format is unexpected or contains no entries:', bloggerData);
-            return [];
+            return { posts: [], totalResults: 0 };
         }
+        
+        const totalResults = parseInt(bloggerData.feed.openSearch$totalResults.$t, 10);
+        const entries = bloggerData.feed.entry || [];
 
-        const posts: BlogPost[] = bloggerData.feed.entry.map((entry: any): BlogPost => {
+        const posts: BlogPost[] = entries.map((entry: any): BlogPost => {
             const contentHtml = entry.content?.$t || '';
             
-            // Create a simple excerpt by stripping HTML and truncating
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = contentHtml;
-            const textContent = tempDiv.textContent || tempDiv.innerText || '';
-            const excerpt = textContent.substring(0, 150) + '...';
+            // Create excerpt safely in the browser context
+            let excerpt = 'No content available.';
+            if (typeof document !== 'undefined') {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = contentHtml;
+                const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                excerpt = textContent.substring(0, 150) + (textContent.length > 150 ? '...' : '');
+            }
 
-            // Get a higher resolution featured image if available
             let imageUrl = entry['media$thumbnail']?.url || null;
             if (imageUrl) {
-                // Request a larger image for better quality
+                // Request a larger, higher-quality image from Blogger's servers
                 imageUrl = imageUrl.replace(/\/s\d+(-c)?\//, '/s1600/');
             }
             
@@ -98,9 +119,11 @@ const fetchAndParseArticles = async (): Promise<BlogPost[]> => {
                 categories: entry.category?.map((cat: any) => cat.term) || [],
             };
         });
+        
+        const result = { posts, totalResults };
+        cache.set(cacheKey, result); // Store result in cache
 
-        // Sort by date, most recent first
-        return posts.sort((a, b) => new Date(b.published).getTime() - new Date(a.published).getTime());
+        return result;
 
     } catch (error) {
         console.error("Error fetching or parsing blog articles:", error);
@@ -109,32 +132,35 @@ const fetchAndParseArticles = async (): Promise<BlogPost[]> => {
 };
 
 /**
- * Returns all articles, using a cache to avoid re-fetching on the client.
- * The server-side function also has its own cache for performance.
- * @param forceRefresh - If true, bypasses the client cache and re-fetches data.
- * @returns A promise that resolves to an array of BlogPost objects.
+ * Fetches all articles by paginating through the results. Used for site-wide operations like finding a slug.
+ * @returns A promise resolving to all blog posts.
  */
-export const getArticles = async (forceRefresh = false): Promise<BlogPost[]> => {
-  if (cachedPosts && !forceRefresh) {
-    return Promise.resolve(cachedPosts);
-  }
-  
-  const posts = await fetchAndParseArticles();
-  cachedPosts = posts;
-  return posts;
-};
+export const getAllArticles = async (): Promise<BlogPost[]> => {
+    let allPosts: BlogPost[] = [];
+    let page = 1;
+    let totalResults = 0;
+    const limit = 100; // Fetch in chunks of 100
+
+    do {
+        const response = await fetchArticles({ page, limit });
+        allPosts = allPosts.concat(response.posts);
+        totalResults = response.totalResults;
+        page++;
+    } while (allPosts.length < totalResults);
+
+    return allPosts;
+}
+
 
 /**
  * Finds a single article by its slug.
+ * This can be slow for large blogs as it may need to fetch all posts.
  * @param slug - The slug of the article to find.
  * @returns A promise that resolves to a single BlogPost or undefined if not found.
  */
 export const getArticleBySlug = async (slug: string): Promise<BlogPost | undefined> => {
-  // Ensure the articles are fetched and cached first
-  const articles = await getArticles();
-  const article = articles.find(post => post.slug === slug);
-  return article;
+    // This is a simplified approach. For a very large blog, a dedicated API endpoint would be better.
+    // However, given the Blogger API limitations, a full client-side fetch is a feasible workaround.
+    const allPosts = await getAllArticles();
+    return allPosts.find(post => post.slug === slug);
 };
-
-// New type file for shared types
-export { }; // This can be removed if types are in a separate file, but here it keeps the structure.

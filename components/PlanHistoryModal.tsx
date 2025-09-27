@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ActivatedLicense, isLicenseExpired } from '../services/licenseService';
 import CloseIcon from './ui/CloseIcon';
+import { Link } from 'react-router-dom';
 
 interface PlanHistoryModalProps {
   isOpen: boolean;
@@ -27,6 +28,10 @@ const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({ isOpen, onClose, li
   // Ensure licenses are sorted with the most recent first
   const sortedLicenses = [...licenses].sort((a, b) => new Date(b.activationDate).getTime() - new Date(a.activationDate).getTime());
 
+  const handlePurchaseClick = () => {
+    onClose();
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -51,9 +56,9 @@ const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({ isOpen, onClose, li
 
             <div className="p-8">
                 <h2 className="text-2xl font-bold text-center mb-2 text-green-300">Plan Activation History</h2>
-                <p className="text-center text-gray-400 mb-6 text-sm">Here is a record of all your activated plans. Licenses expire after 30 days.</p>
+                <p className="text-center text-gray-400 mb-6 text-sm">This is a record of your purchased credit packs. Your credits never expire. Purchase a new pack anytime to add more credits.</p>
                 
-                <div className="max-h-[60vh] overflow-y-auto pr-2">
+                <div className="max-h-[50vh] overflow-y-auto pr-2">
                   {sortedLicenses.length > 0 ? (
                     <div className="space-y-4">
                       {sortedLicenses.map((license) => {
@@ -66,7 +71,7 @@ const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({ isOpen, onClose, li
                                     <p className="text-xs text-gray-500 font-mono" title={license.key}>{maskKey(license.key)}</p>
                                 </div>
                                 <div className={`text-sm font-semibold px-3 py-1 rounded-full text-center ${expired ? 'bg-gray-700 text-gray-300' : 'bg-green-400/20 text-green-200'}`}>
-                                    {expired ? 'Expired' : 'Active'}
+                                    {expired ? 'License Expired' : 'License Active'}
                                 </div>
                              </div>
                              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs text-gray-400 border-t border-gray-700 pt-3">
@@ -79,7 +84,7 @@ const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({ isOpen, onClose, li
                                     <p>{formatDate(license.activationDate)}</p>
                                 </div>
                                 <div>
-                                    <p className="font-bold text-gray-300">Expires</p>
+                                    <p className="font-bold text-gray-300">License Expires</p>
                                     <p>{formatDate(license.expiresAt)}</p>
                                 </div>
                              </div>
@@ -92,6 +97,15 @@ const PlanHistoryModal: React.FC<PlanHistoryModalProps> = ({ isOpen, onClose, li
                       <p className="text-gray-500">You have not activated any plans yet.</p>
                     </div>
                   )}
+                </div>
+                 <div className="mt-6 text-center">
+                    <Link 
+                        to="/#pricing" 
+                        onClick={handlePurchaseClick}
+                        className="inline-block bg-green-500 text-black font-bold py-3 px-8 rounded-lg transition-all duration-300 ease-in-out transform hover:bg-green-400 hover:shadow-lg hover:shadow-green-400/50 focus:outline-none focus:ring-4 focus:ring-green-400"
+                    >
+                        Purchase More Credits
+                    </Link>
                 </div>
             </div>
           </motion.div>

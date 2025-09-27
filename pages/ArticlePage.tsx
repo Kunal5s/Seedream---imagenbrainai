@@ -5,6 +5,7 @@ import { BlogPost } from '../data/blogData';
 import { getArticleBySlug } from '../data/blogData';
 import Spinner from '../components/ui/Spinner';
 import AuthorBio from '../components/AuthorBio';
+import { motion } from 'framer-motion';
 
 const ArticlePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -86,32 +87,42 @@ const ArticlePage: React.FC = () => {
         description={article.excerpt}
         canonicalPath={`/blog/${article.slug}`}
       />
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-            <Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors font-semibold">&larr; Back to All Articles</Link>
-        </div>
-        
-        <article>
-            {article.featuredImage && (
-                <img src={article.featuredImage} alt={article.title} className="w-full aspect-video object-cover rounded-lg mb-8" />
+      <motion.div 
+        layoutId={`article-card-${slug}`}
+        transition={{ duration: 0.5, type: 'spring', stiffness: 80, damping: 20 }}
+        className="max-w-4xl mx-auto bg-gray-900 rounded-lg"
+      >
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+        >
+            <div className="mb-8 p-6 md:p-8 pb-0">
+                <Link to="/blog" className="text-green-300 hover:text-green-200 transition-colors font-semibold">&larr; Back to All Articles</Link>
+            </div>
+            
+            <article className="p-6 md:p-8 pt-0">
+                {article.featuredImage && (
+                    <img src={article.featuredImage} alt={article.title} className="w-full aspect-video object-cover rounded-lg mb-8" />
+                )}
+                <h1 className="text-3xl md:text-5xl font-extrabold text-green-300 leading-tight mb-4">{article.title}</h1>
+                <div className="flex flex-wrap items-center justify-between text-sm text-green-300 mb-8 pb-4 border-b border-gray-700 gap-4">
+                    <span>Published on {new Date(article.published).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    {author && <span>By {author.name}</span>}
+                </div>
+                 <div 
+                    className="prose prose-invert prose-lg max-w-none prose-a:text-green-300 prose-headings:text-green-200 prose-img:rounded-lg"
+                    dangerouslySetInnerHTML={{ __html: contentWithoutFirstImage }} 
+                />
+            </article>
+            
+            {author && (
+                <div className="mt-12 pt-8 border-t border-gray-700 p-6 md:p-8">
+                    <AuthorBio author={author} />
+                </div>
             )}
-            <h1 className="text-3xl md:text-5xl font-extrabold text-green-300 leading-tight mb-4">{article.title}</h1>
-            <div className="flex flex-wrap items-center justify-between text-sm text-green-300 mb-8 pb-4 border-b border-gray-700 gap-4">
-                <span>Published on {new Date(article.published).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                {author && <span>By {author.name}</span>}
-            </div>
-             <div 
-                className="prose prose-invert prose-lg max-w-none prose-a:text-green-300 prose-headings:text-green-200 prose-img:rounded-lg"
-                dangerouslySetInnerHTML={{ __html: contentWithoutFirstImage }} 
-            />
-        </article>
-        
-        {author && (
-            <div className="mt-12 pt-8 border-t border-gray-700">
-                <AuthorBio author={author} />
-            </div>
-        )}
-      </div>
+        </motion.div>
+      </motion.div>
     </>
   );
 };
