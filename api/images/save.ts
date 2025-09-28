@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 
                 const userData = userDoc.data() as UserStatus;
                 const planKey = Object.keys(PLAN_DETAILS).find(k => PLAN_DETAILS[k].name === userData.plan) || 'FREE_TRIAL';
-                const creditsNeeded = (PLAN_DETAILS[planKey]?.creditsPerImage || 5) * 4; // Assuming 4 images are generated
+                const creditsNeeded = PLAN_DETAILS[planKey]?.creditsPerImage || 5; // The cost for generating a single image.
 
                 if (userData.credits < creditsNeeded) {
                     throw new Error('Insufficient credits.');
