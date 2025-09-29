@@ -1,11 +1,6 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 30
-    }
-  },
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -21,15 +16,23 @@
         { "key": "Access-Control-Allow-Headers", "value": "X-Requested-With, Content-Type, Authorization" }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/move-to-marketplace",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron/trigger-bundle-generation",
-      "schedule": "0 0 * * *"
-    }
   ]
 }
+```
+
+```yaml
+# .github/workflows/cron.yml
+name: Cron Jobs
+on:
+  schedule:
+    - cron: '0 * * * *'
+    - cron: '0 0 * * *'
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call APIs
+        run: |
+          curl -X POST https://your-domain.vercel.app/api/cron/move-to-marketplace
+          curl -X POST https://your-domain.vercel.app/api/cron/trigger-bundle-generation
